@@ -14,11 +14,23 @@ function subscribe(fn: () => void): () => void {
 }
 
 const get = () => current
+const notify = () => {
+  for (const fn of listeners) fn()
+}
+
+// Another tab saved settings: adopt them (the event only fires in the tabs that didn't write).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY && e.key !== null) return
+    current = parseSettings(readStorage(KEY))
+    notify()
+  })
+}
 
 export function updateSettings(patch: Partial<Settings>): void {
   current = { ...current, ...patch }
   writeStorage(KEY, JSON.stringify(current))
-  for (const fn of listeners) fn()
+  notify()
 }
 
 export function useSettings(): Settings {

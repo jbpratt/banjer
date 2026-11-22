@@ -3,6 +3,8 @@
 .page {
   max-width: 72rem;
   margin-inline: auto;
+  /* Layout below responds to this page's width in rem, so it also adapts to larger text. */
+  container: explore / inline-size;
 }
 
 .head {
@@ -26,8 +28,10 @@
 .tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: var(--hit-target);
   padding-inline: var(--space-4);
+  white-space: nowrap;
   border-radius: var(--radius-md);
   color: var(--color-ink-muted);
   font-weight: var(--font-weight-semibold);
@@ -44,19 +48,43 @@
   box-shadow: var(--shadow-1);
 }
 
+/* Narrow: three equal tabs across the page, labels wrapping between words if they must. */
+@container explore (width < 26rem) {
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .tab {
+    padding-inline: var(--space-2);
+    white-space: normal;
+    text-align: center;
+    text-wrap: balance;
+  }
+}
+
+/* Very narrow (or very large text): stack them. */
+@container explore (width < 14rem) {
+  .tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ── Segmented radio ──────────────────────────────────────────────────── */
+/* The legend renders above the fieldset's content box (no float), so it stacks over the
+   segments the way a .field label stacks over its select, with the same gap. */
 .segmented {
   display: flex;
-  align-items: flex-end;
-  gap: 0;
+  flex-wrap: wrap;
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
 .segmented legend {
-  float: left;
-  width: 100%;
+  padding: 0;
   margin-bottom: var(--space-1);
   font-weight: var(--font-weight-semibold);
 }
@@ -142,13 +170,33 @@
   font-size: var(--font-size-lg);
 }
 
-.ruleTitle strong {
+.ruleTitle {
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+/* The chord spelled by letter: "Gm7 = G B♭ D F". */
+.spelling {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+/* Unknown chord or key in the URL: what was asked for and what is shown instead. */
+.notice {
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
 }
 
 .formula {
   margin-left: var(--space-3);
+  font-size: var(--font-size-lg);
   font-family: var(--font-sans);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
@@ -156,14 +204,16 @@
 }
 
 .board {
-  min-height: 220px;
   margin-bottom: var(--space-2);
 }
 
 /* ── Shape cards ──────────────────────────────────────────────────────── */
+/* Each card spans two rows of the list's grid and adopts them (subgrid), so diagrams and
+   text start on the same lines across a row even when one shape needs an extra fret row. */
 .cards {
+  container: cards / inline-size;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
   gap: var(--space-4);
   list-style: none;
   padding: 0;
@@ -171,8 +221,10 @@
 
 .card {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
   justify-items: center;
+  align-content: start;
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
@@ -183,6 +235,25 @@
 .card[data-selected] {
   border-color: var(--color-accent-strong);
   box-shadow: 0 0 0 1px var(--color-accent-strong), var(--shadow-1);
+}
+
+/* One card per row on a phone: diagram left, text right, instead of a ~430px-tall stack. */
+@container cards (18rem <= width < 31rem) {
+  .card {
+    grid-row: auto;
+    grid-template-rows: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    justify-items: start;
+  }
+
+  .cardButton > figure {
+    width: min(200px, 42cqi);
+  }
+
+  .unreachable {
+    width: min(200px, 42cqi);
+  }
 }
 
 .cardButton {
@@ -199,6 +270,7 @@
 .cardText {
   display: grid;
   align-content: start;
+  align-self: start;
   gap: var(--space-2);
   width: 100%;
 }
@@ -219,6 +291,12 @@
   gap: var(--space-1);
   padding-left: 1.1em;
   font-size: var(--font-size-sm);
+}
+
+.stretch {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
 }
 
 .small {
@@ -268,6 +346,22 @@
   padding: 0;
 }
 
+/* Too narrow for one line: fold into rows of note + step pairs, so notes line up in
+   columns and each row ends on the step that leads into the next row. */
+@container explore (width < 40rem) {
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, auto minmax(1.75rem, auto));
+    justify-content: start;
+  }
+}
+
+@container explore (width < 21rem) {
+  .steps {
+    grid-template-columns: repeat(2, auto minmax(1.75rem, auto));
+  }
+}
+
 .stepNote {
   display: grid;
   justify-items: center;
@@ -301,11 +395,16 @@
 
 .degreeRow {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  /* Seven across when there is room; fewer, wider chips on phones or with large text. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
   gap: var(--space-2);
   margin-top: var(--space-3);
   list-style: none;
   padding: 0;
+}
+
+.degreeRow + p {
+  margin-top: var(--space-3);
 }
 
 .degreeChip {
@@ -337,6 +436,13 @@
   color: var(--color-ink-muted);
 }
 
+/* The focused chip's notes as steps of the key; holds its line so the board doesn't jump. */
+.keyChord {
+  min-height: 1.5em;
+  margin-block: var(--space-3) var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
 .barres {
   display: grid;
   gap: var(--space-1);
@@ -345,12 +451,34 @@
   font-size: var(--font-size-lg);
 }
 
-@media (max-width: 600px) {
-  .degreeRow {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+/* ── Forced colours: selection drawn with system colours, since shadows and tints vanish ── */
+@media (forced-colors: active) {
+  .tab[aria-current='page'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    text-decoration: underline 2px;
+    text-underline-offset: 0.25em;
   }
 
-  .cards {
-    grid-template-columns: minmax(0, 1fr);
+  .chip[aria-pressed='true'],
+  .degreeChip[aria-pressed='true'],
+  .segment input:checked + span {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
   }
+
+  .degreeChip[aria-pressed='true'] .degreeChord {
+    color: HighlightText;
+  }
+
+  .card[data-selected] {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+.steps + p {
+  margin-top: var(--space-3);
 }

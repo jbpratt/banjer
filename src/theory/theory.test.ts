@@ -1,15 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import type { ChordShape, Setup } from '../domain/types.ts'
 import {
+  chordNotes,
   identifyChord,
   isValidPosition,
   isVoicingOf,
   neckFret,
   noteName,
+  parseChord,
   parseNote,
   positionsForMidi,
   prefersFlats,
+  sameNotesAs,
+  scaleNotes,
   scalePositions,
+  simplifyNote,
+  spellDegree,
+  spellInChord,
+  spellInScale,
   shapeMidis,
   soundingMidi,
   spell,
@@ -36,6 +44,35 @@ describe('pitch', () => {
     expect(prefersFlats('D', true)).toBe(true) // D minor ~ F major
     expect(prefersFlats('E', true)).toBe(false) // E minor ~ G major
     expect(spell(3, 'C', true)).toBe('Eb')
+  })
+
+  it('spells degrees by letter, with double accidentals where the letter demands', () => {
+    expect(spellDegree('G', 'b3')).toBe('Bb')
+    expect(spellDegree('F#', '7')).toBe('E#')
+    expect(spellDegree('B', 'bb7')).toBe('Ab')
+    expect(spellDegree('C', 'bb7')).toBe('Bbb')
+    expect(spellDegree('D#', '7')).toBe('C##')
+    expect(spellDegree('C', '9')).toBe('D')
+    expect(spellDegree('Eb', '#5')).toBe('B')
+    expect(spellDegree('Gb', '4')).toBe('Cb')
+  })
+
+  it('spells within a key by letter', () => {
+    expect(spell(5, 'F#')).toBe('E#') // not F
+    expect(spell(10, 'G')).toBe('Bb') // the blue ♭3, not A♯
+    expect(spell(11, 'Gb')).toBe('Cb')
+    expect(spell(2, 'E', true)).toBe('D')
+    expect(spell(3, 'E', true)).toBe('D#') // raised 7th in minor
+  })
+
+  it('names octaves by letter and simplifies enharmonics', () => {
+    expect(noteName(60, 'C#')).toBe('B#3')
+    expect(parseNote('B#3')).toBe(60)
+    expect(parseNote('Cb4')).toBe(59)
+    expect(simplifyNote('E#')).toBe('F')
+    expect(simplifyNote('Bbb')).toBe('A')
+    expect(simplifyNote('Cb')).toBe('B')
+    expect(simplifyNote('Bb')).toBe('Bb')
   })
 })
 
@@ -111,6 +148,17 @@ describe('scales', () => {
     expect(scalePositions(openG, 'G', 'major', [0, 4]).some((p) => p.pos.string === 5)).toBe(false)
     expect(found.every((p) => [0, 2, 4, 5, 7, 9, 11].includes(p.interval))).toBe(true)
   })
+
+  it('spells scales by letter', () => {
+    expect(scaleNotes('D', 'natural-minor')).toEqual(['D', 'E', 'F', 'G', 'A', 'Bb', 'C'])
+    expect(scaleNotes('E', 'blues')).toEqual(['E', 'G', 'A', 'Bb', 'B', 'D'])
+    expect(scaleNotes('A', 'dorian')).toEqual(['A', 'B', 'C', 'D', 'E', 'F#', 'G'])
+    expect(scaleNotes('F', 'mixolydian')).toEqual(['F', 'G', 'A', 'Bb', 'C', 'D', 'Eb'])
+    expect(spellInScale('D', 'natural-minor', 10)).toBe('Bb')
+    const dMinor = scalePositions(openG, 'D', 'natural-minor', [0, 4])
+    expect(dMinor.find((p) => p.pos.string === 3 && p.pos.fret === 3)).toMatchObject({ degree: 'b6', note: 'Bb' })
+    expect(dMinor.some((p) => p.pos.string === 2 && p.pos.fret === 0)).toBe(false) // open B isn't in D minor
+  })
 })
 
 describe('chords', () => {
@@ -124,6 +172,33 @@ describe('chords', () => {
     expect(identifyChord(shapeMidis(openG, c))).toBe('C')
     expect(identifyChord([62, 66, 69, 72])).toBe('D7')
     expect(identifyChord([64, 67, 71])).toBe('Em')
+  })
+
+  it('spells chord tones by degree', () => {
+    expect(chordNotes('G', 'm7')).toEqual(['G', 'Bb', 'D', 'F'])
+    expect(chordNotes('C', '7')).toEqual(['C', 'E', 'G', 'Bb'])
+    expect(chordNotes('C', 'm')).toEqual(['C', 'Eb', 'G'])
+    expect(chordNotes('B', 'dim7')).toEqual(['B', 'D', 'F', 'Ab'])
+    expect(chordNotes('E#', 'm7b5')).toEqual(['E#', 'G#', 'B', 'D#'])
+    expect(spellInChord('G', 'm7', 10)).toBe('Bb')
+    expect(spellInChord('B', 'dim7', 8)).toBe('Ab')
+    expect(spellInChord('G', 'm', 8)).toBe('Ab') // not a chord tone: G minor's ♭2
+  })
+
+  it('finds chords with the same notes', () => {
+    const names = (root: Parameters<typeof sameNotesAs>[0], q: string) => sameNotesAs(root, q).map((c) => c.symbol)
+    expect(names('E', 'm7')).toEqual(['G6'])
+    expect(names('A', 'm7')).toEqual(['C6'])
+    expect(names('C', '6')).toEqual(['Am7'])
+    expect(names('B', 'm7b5')).toEqual(['Dm6'])
+    expect(names('C', 'dim7')).toEqual(['Ebdim7', 'Gbdim7', 'Adim7'])
+    expect(names('C', 'sus2')).toEqual(['Gsus4'])
+    expect(names('G', '')).toEqual([])
+  })
+
+  it('parses spelled roots', () => {
+    expect(parseChord('E#dim')).toMatchObject({ root: 'E#', quality: 'dim', pitchClasses: [5, 8, 11] })
+    expect(parseChord('Bbm7b5')).toMatchObject({ root: 'Bb', quality: 'm7b5' })
   })
 
   it('accepts voicings that omit the fifth, but not extra tones', () => {

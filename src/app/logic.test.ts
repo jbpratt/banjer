@@ -3,7 +3,24 @@ import { chordToneMarkers, cycleLabels, resolveLabels, scaleMarkers, shapeMarker
 import { formatRoute, parseRoute } from './routes.ts'
 import type { Route } from './routes.ts'
 import { DEFAULT_SETTINGS, parseSettings } from './settings.ts'
-import { degreeText, degreeWord, formulaText, keyMarkers, labCards, labMarkers, moveText } from './views/explore/lab.ts'
+import { majorKey } from '../theory/index.ts'
+import {
+  cardPosition,
+  degreeText,
+  degreeWord,
+  exploreTitle,
+  formulaText,
+  fretSpan,
+  keyChordText,
+  keyMarkers,
+  labCards,
+  labMarkers,
+  moveText,
+  resolveChord,
+  resolveKey,
+  rootOptions,
+  spellingText,
+} from './views/explore/lab.ts'
 
 const OPEN_G = { tuning: 'open-g' as const, capo: 0 }
 
@@ -67,7 +84,84 @@ describe('chord lab', () => {
   })
 })
 
+describe('spelling', () => {
+  it('spells note labels by letter in chords, keys and scales', () => {
+    const notes = (ms: { label?: string }[]) => new Set(ms.map((m) => m.label))
+    expect(notes(chordToneMarkers(OPEN_G, 'Gm7', [0, 5], 'note')!)).toEqual(new Set(['G', 'B♭', 'D', 'F']))
+    const bdim7 = labMarkers(OPEN_G, 'B', 'dim7', labCards(OPEN_G, 'B', 'dim7'), 0, 'note')
+    expect(notes(bdim7).has('A♭')).toBe(true)
+    expect(notes(bdim7).has('G♯')).toBe(false)
+    expect(notes(keyMarkers(OPEN_G, 'F#', [0, 12], null, 'note')).has('E♯')).toBe(true)
+    expect(notes(scaleMarkers(OPEN_G, 'D', 'natural-minor', [0, 12], 'note')).has('B♭')).toBe(true)
+  })
+  it('gives markers a spoken note and what their state means', () => {
+    const cards = labCards(OPEN_G, 'G', 'm7')
+    const m = labMarkers(OPEN_G, 'G', 'm7', cards, cards.findIndex((c) => c.voicing), 'degree')
+    expect(m.find((x) => x.label === '♭3' && !x.state)).toMatchObject({ spoken: 'B flat', stateText: 'selected shape' })
+    expect(m.find((x) => x.state === 'dim')).toMatchObject({ stateText: 'other position' })
+    expect(m.find((x) => x.state === 'next')).toMatchObject({ stateText: 'moved from here' })
+  })
+  it('spells chords and key chords', () => {
+    expect(spellingText('G', '7')).toBe('G7 = G B D F')
+    expect(spellingText('G', 'm7')).toBe('Gm7 = G B♭ D F')
+    const g = majorKey('G')
+    expect(keyChordText(g, g.chords[4]!, true)).toBe('D7 = D F♯ A C — degrees 5 7 2 4 of G')
+    expect(keyChordText(g, g.chords[1]!, false)).toBe('Am = A C E — degrees 2 4 6 of G')
+  })
+})
+
+describe('lab cards', () => {
+  it('places cards where their diagrams say, and flags a 4-fret reach', () => {
+    const gm = labCards(OPEN_G, 'G', 'm')
+    const barre12 = gm.find((c) => c.form.frets.every((f) => f === 12))!
+    expect(barre12.voicing?.frets).toEqual([12, 11, 12, 12])
+    expect(cardPosition(barre12)).toBe('fret 11 (from the barre at 12)')
+    expect(cardPosition(labCards(OPEN_G, 'G', '7').find((c) => c.form.position === 7)!)).toBe('fret 8 (from the D shape at 7)')
+    expect(cardPosition(labCards(OPEN_G, 'G', '7')[0]!)).toBe('fret 3 (from the open strings)')
+    const cmaj7 = labCards(OPEN_G, 'C', 'maj7').find((c) => c.form.frets.every((f) => f === 5))!
+    expect(cmaj7.voicing?.frets).toEqual([9, 5, 5, 5])
+    expect(cardPosition(cmaj7)).toBe('fret 5')
+    expect(fretSpan(cmaj7.voicing!.frets)).toBe(4)
+  })
+  it('says why a card is unreachable', () => {
+    const gm = labCards(OPEN_G, 'G', 'm').find((c) => !c.voicing)
+    expect(gm?.unreachable?.reason).toBe('below-nut')
+    expect(cardPosition(gm!)).toBe('open')
+  })
+})
+
 describe('routes and settings', () => {
+  it('keeps an enharmonic route spelling in the root options', () => {
+    expect(rootOptions('G')).toHaveLength(12)
+    const cs = rootOptions('C#')
+    expect(cs.slice(0, 3)).toEqual(['C', 'C#', 'Db'])
+    const gb = rootOptions('Gb')
+    expect(gb.slice(gb.indexOf('F#'), gb.indexOf('F#') + 3)).toEqual(['F#', 'Gb', 'G'])
+    const es = rootOptions('E#')
+    expect(es.slice(es.indexOf('E'), es.indexOf('E') + 3)).toEqual(['E', 'E#', 'F'])
+  })
+  it('resolves chord and key subjects, falling back to G', () => {
+    expect(resolveChord(undefined)).toEqual({ value: { root: 'G', quality: '' }, unknown: null, replace: null })
+    expect(resolveChord('G#m7')).toEqual({ value: { root: 'G#', quality: 'm7' }, unknown: null, replace: null })
+    expect(resolveChord('E#dim').value.root).toBe('E#')
+    expect(resolveChord('g7')).toEqual({ value: { root: 'G', quality: '7' }, unknown: null, replace: 'G7' })
+    for (const bad of ['G13', 'H9', 'xyz']) expect(resolveChord(bad)).toEqual({ value: { root: 'G', quality: '' }, unknown: bad, replace: 'G' })
+    expect(resolveKey('C#')).toEqual({ value: 'C#', unknown: null, replace: null })
+    expect(resolveKey('f#')).toEqual({ value: 'F#', unknown: null, replace: 'F#' })
+    expect(resolveKey('xyz')).toMatchObject({ value: 'G', unknown: 'xyz', replace: 'G' })
+    expect(resolveKey('C##')).toMatchObject({ value: 'G', unknown: 'C##' })
+  })
+  it('titles Explore views', () => {
+    expect(exploreTitle('chords', 'Bm7b5', 'G')).toBe('Bm7♭5 · Chord lab · Banjer')
+    expect(exploreTitle('keys', 'G', 'F#')).toBe('F♯ major · Keys · Banjer')
+    expect(exploreTitle('scales', 'G', 'G')).toBe('Scales · Banjer')
+  })
+  it('persists a valid tuning only', () => {
+    expect(parseSettings(JSON.stringify({ tuning: 'double-c' })).tuning).toBe('double-c')
+    expect(parseSettings(JSON.stringify({ tuning: 'banjolele' })).tuning).toBe('open-g')
+    expect(parseSettings(JSON.stringify({ tuning: 7 })).tuning).toBe('open-g')
+  })
+
   it('round-trips routes', () => {
     const routes: Route[] = [
       { view: 'explore' },

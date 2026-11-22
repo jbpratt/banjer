@@ -37,7 +37,7 @@ export const SHAPES: ChordShape[] = [
     symbol: 'D7',
     frets: [0, 1, 2, 4, 0],
     fingers: [null, 1, 2, 4, null],
-    note: 'The V7 chord. Most tunes never strike string 4 here, so the pinky is optional until one does.',
+    note: 'The V7 chord: the D shape (4 3 2 4) with string 2’s root lowered two frets to C, the ♭7, and string 1 open on D for the root. Most tunes never strike string 4 here, so the pinky is optional.',
   },
   {
     id: 'open-g:D',

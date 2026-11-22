@@ -475,7 +475,7 @@ zone shows the boxed T.
 | rest (undefined) | 1 | role fill | outline | shown | finger badge |
 | **active** (sounding) | `--marker-active-scale` 1.12 | role fill (a scale ring fills solid with `--role-scale`) | outline + 3 px `--fb-halo` ring at radius + 4.5 | 700 | finger badge, string glow, strike-zone glyph |
 | **next** (ghost) | 1 | none (wood mask) | 2.5 px role colour, dash `5 4` | `--fb-ghost-ink`, 600 | finger badge |
-| **dim** (context) | `--marker-dim-scale` 0.86 | role fill | outline | hidden | group opacity `--marker-dim-opacity` 0.4 |
+| **dim** (context) | `--marker-dim-scale` 0.86 | role fill at `--marker-dim-fill-opacity` 0.35 (scale rings stay solid) | 2.5 px full-strength role-colour ring (≥ 3:1 on wood) | hidden | — |
 
 Active is the only state with a halo. That halo, plus size, is what you see at 2 m. Next
 never fills, so active and next can never be confused, even in grayscale.

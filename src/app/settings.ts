@@ -1,3 +1,6 @@
+import type { TuningId } from '../domain/types.ts'
+import { TUNINGS } from '../theory/index.ts'
+
 export type Theme = 'auto' | 'light' | 'dark'
 /** `auto` uses the spec's per-kind defaults: intervals for shapes and scales. */
 export type LabelMode = 'auto' | 'note' | 'interval' | 'finger' | 'none'
@@ -8,6 +11,8 @@ export interface Settings {
   labels: LabelMode
   /** 0–1. */
   volume: number
+  /** Explore's tuning, kept so it survives leaving Explore and reloads. */
+  tuning: TuningId
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -15,10 +20,12 @@ export const DEFAULT_SETTINGS: Settings = {
   leftHanded: false,
   labels: 'auto',
   volume: 0.8,
+  tuning: 'open-g',
 }
 
 const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
 const LABELS: readonly LabelMode[] = ['auto', 'note', 'interval', 'finger', 'none']
+const TUNING_IDS = Object.keys(TUNINGS) as TuningId[]
 
 function pick<T>(v: unknown, allowed: readonly T[], fallback: T): T {
   return allowed.includes(v as T) ? (v as T) : fallback
@@ -41,6 +48,7 @@ export function parseSettings(raw: string | null): Settings {
     leftHanded: typeof v.leftHanded === 'boolean' ? v.leftHanded : d.leftHanded,
     labels: pick(v.labels, LABELS, d.labels),
     volume,
+    tuning: pick(v.tuning, TUNING_IDS, d.tuning),
   }
 }
 

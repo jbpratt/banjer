@@ -1,4 +1,4 @@
-import type { ChordShape, Finger, NoteName, ScaleId, Setup, StringNum } from '../domain/types.ts'
+import type { ChordShape, Finger, ScaleId, Setup, StringNum } from '../domain/types.ts'
 import type { FretMarker } from '../ui/instrument/types.ts'
 import {
   TUNINGS,
@@ -7,10 +7,13 @@ import {
   pcOf,
   pitchClass,
   positionsWhere,
+  prettyNote,
   scalePositions,
   soundingMidi,
   spell,
+  spellInChord,
 } from '../theory/index.ts'
+import type { SpelledNote } from '../theory/index.ts'
 import type { LabelMode } from './settings.ts'
 
 export type LabelKind = 'note' | 'interval' | 'finger' | 'none'
@@ -25,8 +28,16 @@ export function cycleLabels(k: LabelKind): LabelKind {
   return k === 'interval' ? 'note' : k === 'note' ? 'finger' : 'interval'
 }
 
+/** 'Bbm7b5' → 'B♭m7♭5', 'F##' → 'F𝄪'. */
 export function prettyAccidentals(s: string): string {
-  return s.replace(/#/g, '♯').replace(/b/g, '♭')
+  return prettyNote(s)
+}
+
+const ACCIDENTAL_WORD: Readonly<Record<string, string>> = { '#': ' sharp', b: ' flat', '##': ' double sharp', bb: ' double flat' }
+
+/** How a screen reader should say a spelled note: 'Bb' → 'B flat'. */
+export function spokenNote(n: SpelledNote): string {
+  return n[0]! + (ACCIDENTAL_WORD[n.slice(1)] ?? '')
 }
 
 export function intervalText(rootPc: number, pc: number): string {
@@ -34,12 +45,12 @@ export function intervalText(rootPc: number, pc: number): string {
   return l === '1' ? 'R' : prettyAccidentals(l)
 }
 
-export function noteText(midi: number, key?: NoteName): string {
-  return prettyAccidentals(spell(pitchClass(midi), key))
+export function noteText(midi: number, key?: SpelledNote): string {
+  return prettyNote(spell(pitchClass(midi), key, false))
 }
 
 /** The key a setup sounds in by default: the tuning's home key moved by the capo. */
-export function setupKey(setup: Setup): NoteName {
+export function setupKey(setup: Setup): SpelledNote {
   const home = TUNINGS[setup.tuning].homeKeys[0] ?? 'G'
   return spell(pcOf(home) + setup.capo)
 }
@@ -47,28 +58,36 @@ export function setupKey(setup: Setup): NoteName {
 interface LabelCtx {
   kind: LabelKind
   rootPc: number
-  key: NoteName
+  /** Spells a sounding pitch class for this context (chord tone by degree, scale note by letter). */
+  name: (pc: number) => SpelledNote
 }
 
-function label(ctx: LabelCtx, midi: number, finger?: Finger | null): string | undefined {
+function marker(ctx: LabelCtx, m: FretMarker, midi: number, finger?: Finger | null): FretMarker {
+  const note = ctx.name(pitchClass(midi))
+  m.spoken = spokenNote(note)
   switch (ctx.kind) {
     case 'note':
-      return noteText(midi, ctx.key)
+      m.label = prettyNote(note)
+      break
     case 'interval':
-      return intervalText(ctx.rootPc, pitchClass(midi))
+      m.label = intervalText(ctx.rootPc, pitchClass(midi))
+      break
     case 'finger':
-      return finger == null ? undefined : String(finger)
+      if (finger != null) m.label = String(finger)
+      break
     case 'none':
-      return undefined
+      break
   }
+  return m
 }
 
 /** Chord shape as fretboard markers: root vs chord tones, unplayed strings muted. */
 export function shapeMarkers(shape: ChordShape, kind: LabelKind, capo = 0): FretMarker[] {
   const setup: Setup = { tuning: shape.tuning, capo }
   const parsed = parseChord(shape.symbol)
-  const rootPc = parsed ? pcOf(parsed.root) : pcOf(setupKey(setup))
-  const ctx: LabelCtx = { kind, rootPc, key: parsed?.root ?? setupKey(setup) }
+  const key = parsed?.root ?? setupKey(setup)
+  const rootPc = pcOf(key)
+  const ctx: LabelCtx = { kind, rootPc, name: (pc) => (parsed ? spellInChord(parsed.root, parsed.quality, pc) : spell(pc, key)) }
   const out: FretMarker[] = []
   shape.frets.forEach((fret, i) => {
     const string = (i + 1) as StringNum
@@ -78,10 +97,8 @@ export function shapeMarkers(shape: ChordShape, kind: LabelKind, capo = 0): Fret
     }
     const pos = { string, fret }
     const midi = soundingMidi(setup, pos)
-    const m: FretMarker = { pos, role: pitchClass(midi) === rootPc ? 'root' : 'chord' }
     const finger = shape.fingers?.[i]
-    const l = label(ctx, midi, finger)
-    if (l) m.label = l
+    const m = marker(ctx, { pos, role: pitchClass(midi) === rootPc ? 'root' : 'chord' }, midi, finger)
     if (finger) m.finger = finger
     out.push(m)
   })
@@ -90,18 +107,14 @@ export function shapeMarkers(shape: ChordShape, kind: LabelKind, capo = 0): Fret
 
 export function scaleMarkers(
   setup: Setup,
-  root: NoteName,
+  root: SpelledNote,
   scale: ScaleId,
   frets: readonly [number, number],
   kind: LabelKind,
 ): FretMarker[] {
-  const ctx: LabelCtx = { kind, rootPc: pcOf(root), key: root }
-  return scalePositions(setup, root, scale, frets).map((p) => {
-    const m: FretMarker = { pos: p.pos, role: p.isRoot ? 'root' : 'scale' }
-    const l = label(ctx, p.midi)
-    if (l) m.label = l
-    return m
-  })
+  return scalePositions(setup, root, scale, frets).map((p) =>
+    marker({ kind, rootPc: pcOf(root), name: () => p.note }, { pos: p.pos, role: p.isRoot ? 'root' : 'scale' }, p.midi),
+  )
 }
 
 /** Every position in range that is a tone of `symbol`, root vs chord. Null for an unknown symbol. */
@@ -115,12 +128,9 @@ export function chordToneMarkers(
   if (!parsed) return null
   const rootPc = pcOf(parsed.root)
   const pcs = new Set(parsed.pitchClasses)
-  const ctx: LabelCtx = { kind, rootPc, key: parsed.root }
+  const ctx: LabelCtx = { kind, rootPc, name: (pc) => spellInChord(parsed.root, parsed.quality, pc) }
   return positionsWhere(setup, frets, (m) => pcs.has(pitchClass(m))).map((pos) => {
     const midi = soundingMidi(setup, pos)
-    const m: FretMarker = { pos, role: pitchClass(midi) === rootPc ? 'root' : 'chord' }
-    const l = label(ctx, midi)
-    if (l) m.label = l
-    return m
+    return marker(ctx, { pos, role: pitchClass(midi) === rootPc ? 'root' : 'chord' }, midi)
   })
 }

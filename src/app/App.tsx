@@ -37,6 +37,11 @@ export function App() {
   useEffect(() => {
     getEngine().setVolume(settings.volume)
   }, [settings.volume])
+  // Explore titles itself per chord or key; the other views are fixed.
+  useEffect(() => {
+    if (route.view === 'settings') document.title = 'Settings · Banjer'
+    else if (route.view === 'gallery') document.title = 'Gallery · Banjer'
+  }, [route.view])
 
   if (route.view === 'gallery') {
     return (
@@ -48,6 +53,17 @@ export function App() {
 
   return (
     <div className={styles.shell}>
+      {/* Routes live in the hash, so move focus instead of navigating to #content. */}
+      <a
+        className={styles.skip}
+        href="#content"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('content')?.focus()
+        }}
+      >
+        Skip to content
+      </a>
       <header className={styles.header}>
         <a className={styles.brand} href={formatRoute({ view: 'explore' })}>
           Banjer

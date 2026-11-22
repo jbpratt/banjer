@@ -27,8 +27,10 @@ quality. Claude extends it as the learner's theory grows.
 
 ## Music-model principles
 
-- **Pitch is a MIDI number.** Spelling (C♯ vs D♭) is derived from key context and is
-  never the identity of a note.
+- **Pitch is a MIDI number.** Spelling (C♯ vs D♭) is derived from context and is never
+  the identity of a note. Spell by letter: a chord tone from its root and degree (Gm7 has
+  B♭, Bdim7 has A♭), a scale note from its step (F♯ major has E♯). Routes keep the
+  spelling they were written with (`#/explore/keys/C%23` stays C♯).
 - **Positions are (string, fret).** Strings are numbered 1 (high D in open G) to 5
   (short drone string), matching banjo tab. The 5th string begins at the 5th fret: its
   fret is either 0 (open) or an absolute neck fret ≥ 6, as written in tab.
@@ -64,7 +66,8 @@ quality. Claude extends it as the learner's theory grows.
 
 - **Schedule sound on the audio clock.** Notes start at `AudioContext` times (use
   `audition`'s `delayMs`), never via `setTimeout`.
-- **Static-build friendly.** No backend; settings live in `localStorage`.
+- **Static-build friendly.** No backend; settings (including Explore's tuning) live in
+  `localStorage`.
 
 ## Non-goals for v1
 

@@ -37,6 +37,8 @@ Theory lives in `src/theory/voicings.ts`.
 
 - Strings are numbered 1 (high D) to 5 (short drone). Frets on strings 1–4 are relative to
   the capo; on string 5, 0 = open, otherwise the absolute neck fret (≥ 6).
+- Note names are spelled by letter in context (`spellInChord`, `spellInScale`, `chordNotes`)
+  and shown through `prettyNote` ("B♭m7♭5"); never respell a route's root to a plain name.
 - Every shape in `content/shapes.ts` must pass `validateShape` (`content/content.test.ts`):
   strings 1–4 sound only chord tones, and all tones are present (5th optional).
 - New chord qualities go in `CHORD_QUALITIES` and `CHORD_FORMULAS` (`src/theory/chords.ts`),
