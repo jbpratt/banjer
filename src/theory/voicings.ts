@@ -29,7 +29,10 @@ export interface TriadForm {
   nickname?: string
 }
 
-/** Open-G names for the three major-triad forms (shared with standard C on strings 1–3). */
+/**
+ * Open-G names for the three major-triad forms (shared with standard C on strings 1–3).
+ * 5 1 3 5 is the open strings themselves at the nut, and a barre anywhere else.
+ */
 const OPEN_G_NICKNAMES: Readonly<Record<string, string>> = {
   '5 1 3 5': 'Barre',
   '1 3 5 1': 'F shape',
@@ -113,7 +116,8 @@ function onePerPosition(quality: string, forms: readonly TriadForm[]): TriadForm
 
 function makeForm(setup: Setup, frets: Frets4, degrees: readonly string[]): TriadForm {
   const stack = stackOf(degrees)
-  const nickname = setup.tuning === 'open-g' ? OPEN_G_NICKNAMES[stack] : undefined
+  const named = setup.tuning === 'open-g' ? OPEN_G_NICKNAMES[stack] : undefined
+  const nickname = named === 'Barre' && Math.max(...frets) === 0 ? 'Open' : named
   return { frets, degrees, stack, position: Math.min(...frets), ...(nickname ? { nickname } : {}) }
 }
 

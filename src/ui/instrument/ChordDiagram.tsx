@@ -91,7 +91,7 @@ export function ChordDiagram({
             key={dot.string}
             className={[dot.role === 'root' ? styles.dotRoot : styles.dotChord, lit(dot.string) && styles.lit].filter(Boolean).join(' ')}
           >
-            {/* Moved notes get a dashed outer ring too, so the cue is not colour alone. */}
+            {/* Moved notes get an outer ring too, so the cue is not colour alone. */}
             {lit(dot.string) && <circle className={styles.litRing} cx={dot.x} cy={dot.y} r={12} />}
             {dot.role === 'root' ? (
               <rect className={styles.dot} x={dot.x - 8} y={dot.y - 8} width={16} height={16} rx={2.5} />

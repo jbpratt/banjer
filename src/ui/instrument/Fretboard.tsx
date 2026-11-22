@@ -65,7 +65,7 @@ export function Fretboard({
   frets,
   leftHanded = false,
   showOpenNames = true,
-  focusFret,
+  focus,
   onSelect,
   label,
   className,
@@ -133,8 +133,8 @@ export function Fretboard({
     markers.filter((m) => m.pos.string === string && m.pos.fret === fret).sort((p, q) => z(q) - z(p))[0]
 
   // On a scrolling board, keep the interesting frets in view: [lo, hi] neck frets.
-  const focusRange = useMemo((): [number, number] | undefined => {
-    if (focusFret !== undefined) return [focusFret, focusFret]
+  const focusRange = useMemo((): readonly [number, number] | undefined => {
+    if (focus) return focus
     const active = markers.filter((m) => m.state === 'active')
     const bold = markers.some((m) => m.state === 'dim') ? markers.filter((m) => m.state === undefined) : []
     const set = active.length > 0 ? active : bold
@@ -145,34 +145,47 @@ export function Fretboard({
     const lo = Math.min(...ns)
     const hi = Math.max(...ns)
     return hi - lo <= 5 ? [lo, hi] : undefined
-  }, [focusFret, markers, setup])
+  }, [focus, markers, setup])
 
   const crop = showOpenNames ? 0 : layout.gutter - layout.narrowGutter
   const vbMinX = leftHanded ? 0 : crop
   const vbWidth = W - crop
-  // Screen-space span of a fret range, as fractions of the board's width (nut lane for fret 0).
+  // Screen-space span of a fret range, as fractions of the board's width. Fret 0 runs from
+  // the board's outer edge, so the open-string names come into view with the nut.
   const frac = (x: number) => (X(x) - vbMinX) / vbWidth
   const fretEdges = (n: number): [number, number] => {
-    if (n <= 0 || n < g.lo) return g.hasNut ? [layout.laneStart, layout.nutEnd] : [g.X0, g.X0]
+    if (n <= 0 || n < g.lo) return g.hasNut ? [0, layout.nutEnd] : [g.X0, g.X0]
     const k = Math.min(g.hi, Math.round(n))
     return [fretWireX(g, k - 1), fretWireX(g, k)]
   }
   const span = focusRange && [...fretEdges(focusRange[0]), ...fretEdges(focusRange[1])].map(frac)
-  const focusLo = span ? Math.min(...span) : undefined
-  const focusHi = span ? Math.max(...span) : undefined
+  // Where to scroll, as a fraction of the track. Worked out here rather than in the effect so
+  // a snap point can sit there too: the board's proximity snapping would otherwise pull a
+  // shape near the nut back to fret 0 and clip it.
+  const focusLeft = useMemo(() => {
+    if (!scroll || !span || !choice.width || !measured.width) return undefined
+    const sw = choice.width
+    const cw = measured.width
+    const pad = 48
+    const lo = Math.min(...span) * sw
+    const hi = Math.max(...span) * sw
+    // Centre the range, but never push its start (or, if it fits, its end) out of view. Near
+    // the nut four frets fill a phone, so the padding shrinks before the shape is clipped.
+    const centred = (lo + hi) / 2 - cw / 2
+    const room = cw - (hi - lo)
+    const p = Math.min(pad, room / 2)
+    const left = room >= 0 ? Math.min(lo - p, Math.max(hi + p - cw, centred)) : lo - pad
+    return Math.min(Math.max(0, left), sw - cw) / sw
+    // span is fresh each render; its endpoints are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scroll, span?.[0], span?.[1], span?.[2], span?.[3], choice.width, measured.width])
   const scrolledOnce = useRef(false)
   useEffect(() => {
     const el = scrollRef.current
-    if (!scroll || !el || focusLo === undefined || focusHi === undefined) return
-    const pad = 48
-    const lo = focusLo * el.scrollWidth
-    const hi = focusHi * el.scrollWidth
-    // Centre the range, but never push its start (or, if it fits, its end) out of view.
-    const centred = (lo + hi) / 2 - el.clientWidth / 2
-    const left = hi - lo + 2 * pad <= el.clientWidth ? Math.min(lo - pad, Math.max(hi + pad - el.clientWidth, centred)) : lo - pad
-    el.scrollTo({ left, behavior: scrolledOnce.current && !reduced ? 'smooth' : 'auto' })
+    if (!el || focusLeft === undefined) return
+    el.scrollTo({ left: focusLeft * el.scrollWidth, behavior: scrolledOnce.current && !reduced ? 'smooth' : 'auto' })
     scrolledOnce.current = true
-  }, [scroll, focusLo, focusHi, reduced, choice.width])
+  }, [focusLeft, reduced])
 
   return (
     <figure ref={figRef} className={[styles.figure, className].filter(Boolean).join(' ')}>
@@ -378,6 +391,8 @@ export function Fretboard({
           {[{ n: 0, x: g.hasNut ? layout.gutter : g.X0 }, ...rulerFrets(g)].map(({ n, x }) => (
             <span key={n} style={{ insetInlineStart: `${((mirrorX(layout, x, leftHanded) - vbMinX) / vbWidth) * 100}%` }} />
           ))}
+          {/* Snapping aligns a point to the scroll padding (the fade), so offset by it. */}
+          {focusLeft !== undefined && <span key="focus" style={{ insetInlineStart: `calc(${focusLeft * 100}% + var(--fade-size))` }} />}
         </div>
       )}
       </div>

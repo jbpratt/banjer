@@ -3,9 +3,13 @@ import { chordToneMarkers, cycleLabels, resolveLabels, scaleMarkers, shapeMarker
 import { formatRoute, parseRoute } from './routes.ts'
 import type { Route } from './routes.ts'
 import { DEFAULT_SETTINGS, parseSettings } from './settings.ts'
-import { majorKey } from '../theory/index.ts'
+import type { Setup } from '../domain/types.ts'
+import { isClose, majorKey } from '../theory/index.ts'
 import {
+  cardFocus,
+  cardName,
   cardPosition,
+  cardsTopFret,
   degreeText,
   degreeWord,
   exploreTitle,
@@ -15,6 +19,7 @@ import {
   keyMarkers,
   labCards,
   labMarkers,
+  labRoot,
   moveText,
   resolveChord,
   resolveKey,
@@ -54,7 +59,8 @@ describe('markers', () => {
 })
 
 describe('chord lab', () => {
-  it('spells degrees and moves', () => {
+  it('spells degrees and moves in words', () => {
+    expect(moveText({ string: 3, from: '5', to: '7', delta: 4 })).toBe('Raise the 5th on string 3 four frets → 7')
     expect(['1', 'b3', '#5', 'bb7', '9'].map(degreeText)).toEqual(['R', '♭3', '♯5', '𝄫7', '9'])
     expect(['1', '3', '5', 'b7'].map(degreeWord)).toEqual(['root', '3rd', '5th', '♭7'])
     expect(formulaText('7')).toBe('R 3 5 ♭7')
@@ -117,7 +123,9 @@ describe('lab cards', () => {
     expect(barre12.voicing?.frets).toEqual([12, 11, 12, 12])
     expect(cardPosition(barre12)).toBe('fret 11 (from the barre at 12)')
     expect(cardPosition(labCards(OPEN_G, 'G', '7').find((c) => c.form.position === 7)!)).toBe('fret 8 (from the D shape at 7)')
-    expect(cardPosition(labCards(OPEN_G, 'G', '7')[0]!)).toBe('fret 3 (from the open strings)')
+    const g7 = labCards(OPEN_G, 'G', '7')[0]!
+    expect([cardName(g7), cardPosition(g7)]).toEqual(['Open', 'fret 3'])
+    expect(cardName(labCards(OPEN_G, 'G', '7').at(-1)!)).toBe('Barre')
     const cmaj7 = labCards(OPEN_G, 'C', 'maj7').find((c) => c.form.frets.every((f) => f === 5))!
     expect(cmaj7.voicing?.frets).toEqual([9, 5, 5, 5])
     expect(cardPosition(cmaj7)).toBe('fret 5')
@@ -126,7 +134,26 @@ describe('lab cards', () => {
   it('says why a card is unreachable', () => {
     const gm = labCards(OPEN_G, 'G', 'm').find((c) => !c.voicing)
     expect(gm?.unreachable?.reason).toBe('below-nut')
-    expect(cardPosition(gm!)).toBe('open')
+    expect(cardPosition(gm!)).toBe('at the nut')
+  })
+  it('names non-open-G forms by degree and drops unreachable filler forms', () => {
+    const dc: Setup = { tuning: 'double-c', capo: 0 }
+    expect(cardName(labCards(dc, 'C', '')[0]!)).toBe('R 5 R 3 shape')
+    // Every unreachable card left is a close form, whose reason teaches something.
+    for (const q of ['m', '7', 'maj7', 'm7', 'dim', 'm7b5', 'dim7'])
+      for (const r of ['C', 'G', 'D', 'A'] as const)
+        for (const c of labCards(dc, r, q)) if (!c.voicing) expect(isClose('', c.form.degrees)).toBe(true)
+  })
+  it('respells a lab root only to avoid double accidentals', () => {
+    expect(labRoot('Db', 'dim7')).toBe('C#')
+    expect(labRoot('Db', 'm')).toBe('Db')
+    expect(labRoot('C', 'dim7')).toBe('C') // C E♭ G♭ B𝄫: no plainer root
+    expect(labRoot('C#', '')).toBe('C#')
+  })
+  it('extends the board to the highest voicing and focuses the whole selected shape', () => {
+    const cards = labCards(OPEN_G, 'C', 'maj7')
+    expect(cardsTopFret(OPEN_G, cards)).toBe(16)
+    expect(cardFocus(OPEN_G, labCards(OPEN_G, 'G', '7')[0])).toEqual([0, 3])
   })
 })
 

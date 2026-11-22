@@ -123,13 +123,13 @@
   font-size: 9px; /* ≈14 CSS px at the lg width */
 }
 
-/* highlight: an accent halo plus a dashed outer ring (shape, not only colour), e.g. the
-   note that moved from the major shape */
+/* highlight: an accent halo plus a solid outer ring (shape, not only colour), e.g. the
+   note that moved from the major shape. Solid, so it never reads as the fretboard's dashed
+   ghost, which marks where a moved note came from. */
 .litRing {
   fill: none;
   stroke: var(--color-accent-strong);
   stroke-width: 1.5px;
-  stroke-dasharray: 3 2.5;
 }
 
 .lit .dot {

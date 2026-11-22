@@ -1,6 +1,6 @@
 import type { ChordShape, Midi, PitchClass, Setup, StringNum } from '../domain/types.ts'
 import { soundingMidi } from './neck.ts'
-import { isSpelledNote, pcOf, pitchClass, simplifyNote, spell, spellDegree } from './pitch.ts'
+import { accidentalCount, isSpelledNote, pcOf, pitchClass, plainNames, spell, spellDegree, spellingRoot } from './pitch.ts'
 import type { SpelledNote } from './pitch.ts'
 
 /** Chord qualities by symbol suffix, as semitones above the root. */
@@ -73,9 +73,41 @@ export function parseChord(symbol: string): ParsedChord | null {
   return { root, quality, pitchClasses: intervals.map((i) => pitchClass(r + i)) }
 }
 
-/** The chord's notes spelled by letter, in formula order: Gm7 = G B♭ D F, Bdim7 = B D F A♭. */
+/**
+ * The chord's notes spelled by letter, in formula order: Gm7 = G B♭ D F, Bdim7 = B D F A♭.
+ * A root that can't carry every degree spells the chord from its plain enharmonic
+ * (F♭dim7 = E G B♭ D♭), so the letters never mix two roots.
+ */
 export function chordNotes(root: SpelledNote, quality: string): SpelledNote[] {
-  return (CHORD_FORMULAS[quality] ?? []).map((d) => spellDegree(root, d))
+  const formula = CHORD_FORMULAS[quality] ?? []
+  const r = spellingRoot(root, formula)
+  return formula.map((d) => spellDegree(r, d))
+}
+
+/** [double accidentals, all accidentals] in a chord's spelling; Infinity if it can't be spelled on `root`. */
+function spellingCost(root: SpelledNote, quality: string): [number, number] {
+  if (spellingRoot(root, CHORD_FORMULAS[quality] ?? []) !== root) return [Infinity, Infinity]
+  const counts = chordNotes(root, quality).map(accidentalCount)
+  return [counts.filter((n) => n > 1).length, counts.reduce((a, b) => a + b, 0)]
+}
+
+/**
+ * The enharmonic root that spells the chord most simply: fewest double accidentals, then
+ * fewest accidentals. C♯dim7 (C♯ E G B♭) over D♭dim7 (D♭ F♭ A𝄫 C𝄫); ties keep `root`.
+ */
+export function simplestRoot(root: SpelledNote, quality: string): SpelledNote {
+  let best = root
+  let cost = spellingCost(root, quality)
+  for (const r of plainNames(pcOf(root))) {
+    const c = spellingCost(r, quality)
+    if (c[0] < cost[0] || (c[0] === cost[0] && c[1] < cost[1])) [best, cost] = [r, c]
+  }
+  return best
+}
+
+/** Whether the chord's spelling needs a double accidental (D♭dim7 has A𝄫 and C𝄫). */
+export function hasDoubleAccidental(root: SpelledNote, quality: string): boolean {
+  return chordNotes(root, quality).some((n) => accidentalCount(n) > 1)
 }
 
 /**
@@ -84,7 +116,7 @@ export function chordNotes(root: SpelledNote, quality: string): SpelledNote[] {
  */
 export function spellInChord(root: SpelledNote, quality: string, pc: PitchClass): SpelledNote {
   const d = chordDegree(quality, pitchClass(pc - pcOf(root)))
-  if (d) return spellDegree(root, d)
+  if (d) return spellDegree(spellingRoot(root, CHORD_FORMULAS[quality] ?? []), d)
   return spell(pc, root, (CHORD_QUALITIES[quality] ?? []).includes(3))
 }
 
@@ -96,8 +128,9 @@ export interface ChordName {
 
 /**
  * Other chord symbols with exactly the same notes: Em7 = G6, Bm7♭5 = Dm6,
- * Cdim7 = E♭dim7 = G♭dim7 = Adim7, Csus2 = Gsus4. Each root is spelled as the chord tone
- * it is in the original, unless that would need a double accidental (B𝄫 → A).
+ * Cdim7 = D♯dim7 = F♯dim7 = Adim7, Csus2 = Gsus4. Each root is spelled as the chord tone
+ * it is in the original, unless an enharmonic spells its chord more simply
+ * (`simplestRoot`: D♯dim7 = D♯ F♯ A C, not E♭dim7 = E♭ G♭ B𝄫 D𝄫).
  */
 export function sameNotesAs(root: SpelledNote, quality: string): ChordName[] {
   const intervals = CHORD_QUALITIES[quality]
@@ -108,12 +141,13 @@ export function sameNotesAs(root: SpelledNote, quality: string): ChordName[] {
   const out: ChordName[] = []
   formula.forEach((degree, k) => {
     const pc = pitchClass(r + intervals[k]!)
-    let name = spellDegree(root, degree)
-    if (name.endsWith('##') || name.endsWith('bb')) name = simplifyNote(name)
+    const tone = spellDegree(spellingRoot(root, formula), degree)
     for (const [q, iv] of Object.entries(CHORD_QUALITIES)) {
       if (pc === r && q === quality) continue
       const tones = new Set(iv.map((i) => pitchClass(pc + i)))
-      if (tones.size === want.size && [...tones].every((t) => want.has(t))) out.push({ root: name, quality: q, symbol: name + q })
+      if (tones.size !== want.size || ![...tones].every((t) => want.has(t))) continue
+      const name = simplestRoot(tone, q)
+      out.push({ root: name, quality: q, symbol: name + q })
     }
   })
   return out

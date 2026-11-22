@@ -168,9 +168,8 @@ export function createAudioEngine(opts: EngineOptions = {}): AudioEngine {
   function request(midi: Midi, priority: number): Promise<void> {
     const r = renderer
     if (buffers.has(midi) || !r) return Promise.resolve()
-    const sampleRate = rate()
-    return r.render(midi, VARIANT, sampleRate, priority).then(
-      (samples) => {
+    return r.render(midi, VARIANT, rate(), priority).then(
+      ({ samples, sampleRate }) => {
         if (!buffers.has(midi)) buffers.set(midi, toBuffer(samples, sampleRate))
       },
       () => {

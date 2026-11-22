@@ -50,12 +50,13 @@ export interface FretboardProps {
   /** Label open strings with note names at the nut. Default true. */
   showOpenNames?: boolean
   /**
-   * Absolute neck fret to bring into view when the board is too wide for its container and
-   * scrolls (phones), e.g. the selected shape's position. Without it the board centres on
-   * active markers, or on the un-dimmed ones when the rest are dimmed and they sit within a
-   * few frets; otherwise it starts at the nut.
+   * Inclusive range of absolute neck frets to bring into view when the board is too wide for
+   * its container and scrolls (phones), e.g. the selected shape; 0 means the nut, and brings
+   * the open-string names into view with it. Without it the board centres on active markers,
+   * or on the un-dimmed ones when the rest are dimmed and they sit within a few frets;
+   * otherwise it starts at the nut.
    */
-  focusFret?: number
+  focus?: readonly [number, number]
   /** Called when a position is clicked or tapped, e.g. to audition the note. */
   onSelect?: (pos: Position) => void
   /** Accessible description of what is shown, e.g. "G major scale, frets 0 to 7". */

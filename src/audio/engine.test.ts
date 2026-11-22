@@ -103,9 +103,9 @@ function fakeRenderer() {
   const calls: { midi: Midi; priority: number; resolve: () => void; reject: () => void }[] = []
   const renderer: PluckRenderer = {
     start() {},
-    render(midi, _variant, _rate, priority = 0) {
+    render(midi, _variant, sampleRate, priority = 0) {
       return new Promise((resolve, reject) => {
-        calls.push({ midi, priority, resolve: () => resolve(new Float32Array(8)), reject: () => reject(new Error('x')) })
+        calls.push({ midi, priority, resolve: () => resolve({ samples: new Float32Array(8), sampleRate }), reject: () => reject(new Error('x')) })
       })
     },
   }

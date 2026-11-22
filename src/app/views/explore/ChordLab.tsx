@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Setup, TuningId } from '../../../domain/types.ts'
 import {
+  FRET_COUNT,
   LAB_QUALITIES,
   QUALITY_RULES,
   TUNINGS,
@@ -13,7 +14,7 @@ import {
   sameNotesAs,
   shapeMidis,
   soundingMidi,
-  spellInChord,
+  spell,
 } from '../../../theory/index.ts'
 import type { SpelledNote } from '../../../theory/index.ts'
 import { ChordDiagram, Fretboard, chordWindow } from '../../../ui/instrument/index.ts'
@@ -25,13 +26,17 @@ import styles from './Explore.module.css'
 import {
   QUALITY_NAMES,
   STRETCH_SPAN,
+  cardFocus,
+  cardName,
   cardPosition,
+  cardsTopFret,
   chordTitle,
   degreeText,
   formulaText,
   fretSpan,
   labCards,
   labMarkers,
+  labRoot,
   lowestFretted,
   moveText,
   rootOptions,
@@ -53,7 +58,8 @@ interface Props {
   onChord: (root: SpelledNote, quality: string) => void
 }
 
-const BOARD_FRETS: [number, number] = [0, 15]
+/** The board shows at least the nut to fret 15, more when a shape reaches past it. */
+const BOARD_TOP = 15
 const COMPARE_GAP_MS = 900
 
 export function ChordLab({ content, tuning, root, quality, labels, leftHanded, controls, onChord }: Props) {
@@ -68,6 +74,12 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
   const select = (index: number) => setPicked({ key: chordKey, index })
 
   const sel = cards[selected]
+  const top = Math.min(FRET_COUNT, Math.max(BOARD_TOP, cardsTopFret(setup, cards)))
+  const boardFrets = useMemo((): [number, number] => [0, top], [top])
+  const focus = useMemo(() => cardFocus(setup, sel), [setup, sel])
+  // Picking from the lab avoids double accidentals an enharmonic root doesn't need
+  // (D♭ + dim7 → C♯dim7); a typed URL keeps its spelling.
+  const choose = (r: SpelledNote, q: string) => onChord(labRoot(r, q), q)
   const markers = useMemo(
     () => labMarkers(setup, root, quality, cards, selected, labels),
     [setup, root, quality, cards, selected, labels],
@@ -121,14 +133,15 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
     engine.audition(strumMidis(setup, c.voicing.frets, droneFits), { strumMs: 30, delayMs: COMPARE_GAP_MS })
   }
 
-  const droneNote = prettyNote(spellInChord(root, quality, pitchClass(openMidi(setup, 5))))
+  // Named as the open string, not as a chord tone: D♭dim7's drone is G, not A𝄫.
+  const droneNote = prettyNote(spell(pitchClass(openMidi(setup, 5))))
 
   return (
     <>
       <div className={viewStyles.controls}>
         <label className={viewStyles.field}>
           Root
-          <select value={root} onChange={(e) => onChord(e.target.value as SpelledNote, quality)}>
+          <select value={root} onChange={(e) => choose(e.target.value as SpelledNote, quality)}>
             {rootOptions(root).map((r) => (
               <option key={r} value={r}>
                 {prettyNote(r)}
@@ -146,7 +159,7 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
             type="button"
             className={styles.chip}
             aria-pressed={q === quality}
-            onClick={() => onChord(root, q)}
+            onClick={() => choose(root, q)}
           >
             {QUALITY_NAMES[q] ?? q}
           </button>
@@ -180,9 +193,9 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
         <Fretboard
           setup={setup}
           markers={markers}
-          frets={BOARD_FRETS}
+          frets={boardFrets}
           leftHanded={leftHanded}
-          {...(sel?.voicing ? { focusFret: sel.voicing.lowestFret ?? 0 } : {})}
+          {...(focus ? { focus } : {})}
           onSelect={(pos) => engine.audition([soundingMidi(setup, pos)])}
           label={`${title} shapes up the neck${sel?.voicing ? `; selected shape at ${cardPosition(sel)}` : ''}`}
         />
@@ -193,11 +206,12 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
       </p>
 
       <h2 className={viewStyles.sectionTitle}>Up the neck, from the major shapes</h2>
+      <p className={viewStyles.meta}>Ringed: the note that moved, where it lands. Under each name: the major shape it started from.</p>
       <ol className={styles.cards} role="list">
         {cards.map((c, i) => {
           const v = c.voicing
           const shape = shapes[i]
-          const name = c.form.nickname ?? `${c.form.stack} shape`
+          const name = cardName(c)
           const where = cardPosition(c)
           const span = v ? fretSpan(v.frets) : 0
           return (
@@ -233,9 +247,8 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
                   {name} <span className={viewStyles.meta}>{where}</span>
                 </p>
                 <p className={styles.stack}>
-                  <span className="visually-hidden">Degrees from string 4 to string 1: </span>
+                  <span className="visually-hidden">Major shape, string 4 to string 1: </span>
                   {c.form.stack.split(' ').map(degreeText).join(' ')}
-                  {v && v.moves.length > 0 && <> → {[3, 2, 1, 0].map((k) => degreeText(v.degrees[k]!)).join(' ')}</>}
                 </p>
                 {v && v.moves.length > 0 && (
                   <ul className={styles.moves} role="list">

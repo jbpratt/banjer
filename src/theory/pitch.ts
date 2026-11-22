@@ -80,23 +80,49 @@ export function degreeSemitones(degree: string): number | null {
   return MAJOR_STEPS[n % 7]! + 12 * Math.floor(n / 7) + ACCIDENTAL_SEMIS[(m[1] ?? '') as Accidental]
 }
 
+/** The degree's letter above `root`, and the accidental it needs (undefined past a double). */
+function degreeLetter(root: SpelledNote, degree: string): [letter: number, accidental: Accidental | undefined] {
+  const semis = degreeSemitones(degree)
+  if (semis === null) throw new Error(`bad degree: ${degree}`)
+  const [l, acc] = split(root)
+  const letter = (l + Number(DEGREE_RE.exec(degree)![2]) - 1) % 7
+  const target = pitchClass(LETTER_PC[l]! + acc + semis)
+  return [letter, SEMIS_ACCIDENTAL[((target - LETTER_PC[letter]! + 18) % 12) - 6]]
+}
+
+/**
+ * The root to spell these degrees from: `root` itself, unless one of them would need a
+ * triple accidental on its letter (F♭'s 𝄫7 is E♭𝄫), in which case its plain enharmonic (E).
+ * Spell a whole chord from one root so its letters stay consistent.
+ */
+export function spellingRoot(root: SpelledNote, degrees: readonly string[]): SpelledNote {
+  return degrees.every((d) => degreeLetter(root, d)[1] !== undefined) ? root : simplifyNote(root)
+}
+
 /**
  * Spell a degree above a root by letter: the letter is the root's letter plus (degree − 1),
  * and the accidental is whatever makes the interval right.
  * spellDegree('G', 'b3') = 'Bb', spellDegree('B', 'bb7') = 'Ab', spellDegree('F#', '7') = 'E#'.
- * Falls back to a plain name if the result would need a triple accidental.
+ * A root that can't carry the degree (see `spellingRoot`) is spelled from its plain
+ * enharmonic: the letter always follows a root, never a guess.
  */
 export function spellDegree(root: SpelledNote, degree: string): SpelledNote {
-  const semis = degreeSemitones(degree)
-  if (semis === null) throw new Error(`bad degree: ${degree}`)
-  const [l, acc] = split(root)
-  const n = Number(DEGREE_RE.exec(degree)![2]) - 1
-  const letter = (l + n) % 7
-  const target = pitchClass(LETTER_PC[l]! + acc + semis)
-  const diff = ((target - LETTER_PC[letter]! + 18) % 12) - 6
-  const accidental = SEMIS_ACCIDENTAL[diff]
-  if (accidental === undefined) return (diff > 0 ? SHARP_NAMES : FLAT_NAMES)[target]!
+  const r = spellingRoot(root, [degree])
+  const [letter, accidental] = degreeLetter(r, degree)
+  // Plain roots have at most one accidental, so a double always covers their degrees.
+  if (accidental === undefined) throw new Error(`can't spell ${degree} above ${root}`)
   return `${LETTERS[letter]!}${accidental}`
+}
+
+/** Accidentals written in a spelling: 0 for G, 1 for B♭, 2 for B𝄫. */
+export function accidentalCount(name: SpelledNote): number {
+  return Math.abs(split(name)[1])
+}
+
+/** The plain names for a pitch class: ['C#', 'Db'], or ['G']. */
+export function plainNames(pc: PitchClass): NoteName[] {
+  const p = pitchClass(pc)
+  return [...new Set([SHARP_NAMES[p]!, FLAT_NAMES[p]!])]
 }
 
 /** Whether notes in this key should be spelled with flats. */

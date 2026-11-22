@@ -33,10 +33,10 @@ describe('chord degrees', () => {
 })
 
 describe('major forms in open G', () => {
-  test('G cycles barre → F shape → D shape → barre an octave up', () => {
+  test('G cycles open → F shape → D shape → barre an octave up', () => {
     const forms = majorForms(OPEN_G, 'G')
     expect(forms.map((f) => [f.frets.join(''), f.stack, f.nickname])).toEqual([
-      ['0000', '5 1 3 5', 'Barre'],
+      ['0000', '5 1 3 5', 'Open'],
       ['5345', '1 3 5 1', 'F shape'],
       ['9879', '3 5 1 3', 'D shape'],
       ['12121212', '5 1 3 5', 'Barre'],

@@ -6,6 +6,8 @@ import {
   chordNotes,
   deriveWithReason,
   droneDegree,
+  hasDoubleAccidental,
+  isClose,
   isSpelledNote,
   majorForms,
   openMidi,
@@ -14,6 +16,7 @@ import {
   pitchClass,
   prettyNote,
   scalePositions,
+  simplestRoot,
   soundingMidi,
   spellInChord,
 } from '../../../theory/index.ts'
@@ -42,10 +45,12 @@ export function formulaText(quality: string): string {
   return (CHORD_FORMULAS[quality] ?? []).map(degreeText).join(' ')
 }
 
-/** "Lower the root (string 1) two frets → ♭7". */
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'] as const
+
+/** "Lower the root on string 1 two frets → ♭7". */
 export function moveText(m: Move): string {
   const n = Math.abs(m.delta)
-  const frets = n === 1 ? 'one fret' : n === 2 ? 'two frets' : n === 3 ? 'three frets' : `${n} frets`
+  const frets = `${NUMBER_WORDS[n] ?? n} fret${n === 1 ? '' : 's'}`
   return `${m.delta < 0 ? 'Lower' : 'Raise'} the ${degreeWord(m.from)} on string ${m.string} ${frets} → ${degreeText(m.to)}`
 }
 
@@ -56,8 +61,42 @@ export interface LabCard {
   unreachable: Unreachable | null
 }
 
+/**
+ * A card per major form. A close form that can't reach the quality keeps its card, since
+ * the reason teaches something; a filler form (double C's 1 5 1 3) that can't is dropped.
+ */
 export function labCards(setup: Setup, root: SpelledNote, quality: string): LabCard[] {
-  return majorForms(setup, root).map((form) => ({ form, ...deriveWithReason(form, quality) }))
+  return majorForms(setup, root)
+    .map((form) => ({ form, ...deriveWithReason(form, quality) }))
+    .filter((c) => c.voicing || isClose('', c.form.degrees))
+}
+
+/** A card's name: its open-G nickname, "Open" at the nut, or its stack ("R 5 R 3 shape"). */
+export function cardName(card: LabCard): string {
+  if (card.form.nickname) return card.form.nickname
+  if (lowestFretted(card.form.frets) === null) return 'Open'
+  return `${card.form.stack.split(' ').map(degreeText).join(' ')} shape`
+}
+
+/**
+ * The root to show when picking a chord from the lab: as chosen, unless its spelling needs
+ * a double accidental an enharmonic avoids (D♭dim7 → C♯dim7). Typed URLs keep their spelling.
+ */
+export function labRoot(root: SpelledNote, quality: string): SpelledNote {
+  return hasDoubleAccidental(root, quality) ? simplestRoot(root, quality) : root
+}
+
+/** Highest neck fret any card's voicing reaches (capo-relative frets plus the capo). */
+export function cardsTopFret(setup: Setup, cards: readonly LabCard[]): number {
+  return Math.max(0, ...cards.flatMap((c) => (c.voicing ? c.voicing.frets.map((f) => f + setup.capo) : [])))
+}
+
+/** Neck frets the selected card covers, nut (0) included when a string is open. */
+export function cardFocus(setup: Setup, card: LabCard | undefined): [number, number] | undefined {
+  const v = card?.voicing
+  if (!v) return undefined
+  const ns = v.frets.map((f) => f + setup.capo)
+  return [Math.min(...ns), Math.max(...ns)]
 }
 
 /** Lowest fretted (non-open) fret: what a chord box labels "Nfr". Null if all open. */
@@ -76,14 +115,14 @@ export const STRETCH_SPAN = 4
 
 /**
  * Where a card sits, matching its diagram's "Nfr": "fret 11 (from the barre at 12)" when the
- * edit moved the lowest note, "open" when nothing is fretted.
+ * edit moved the lowest note, "at the nut" when nothing is fretted. A form at the nut is
+ * named "Open" (`cardName`), so its edits just say "fret 3".
  */
 export function cardPosition(card: LabCard): string {
   const from = lowestFretted(card.form.frets)
   const at = card.voicing ? card.voicing.lowestFret : from
-  const here = at === null ? 'open' : `fret ${at}`
-  if (!card.voicing || at === from) return here
-  if (from === null) return `${here} (from the open strings)`
+  const here = at === null ? 'at the nut' : `fret ${at}`
+  if (!card.voicing || at === from || from === null) return here
   const name = card.form.nickname ? card.form.nickname.replace(/^Barre/, 'barre') : 'major shape'
   return `${here} (from the ${name} at ${from})`
 }

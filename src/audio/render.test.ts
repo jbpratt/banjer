@@ -48,7 +48,7 @@ describe('worker renderer', () => {
     expect(midis(w!)).toEqual([48]) // already in flight before the others arrived
     for (let i = 0; i < 4; i++) w!.reply()
     expect(midis(w!)).toEqual([48, 55, 59, 62, 49])
-    await expect(done).resolves.toBeInstanceOf(Float32Array)
+    await expect(done).resolves.toMatchObject({ samples: expect.any(Float32Array), sampleRate: 48000 })
   })
 
   it('keeps workers free of background work for taps', () => {
@@ -77,6 +77,19 @@ describe('worker renderer', () => {
     expect(r.render(50, 'bright', 48000, 2)).toBe(a)
     FakeWorker.all[0]!.reply()
     expect(midis(FakeWorker.all[0]!)).toEqual([48, 52])
+  })
+
+  it('reuses a pitch queued at another rate, and reports the rate it rendered at', async () => {
+    const r = createWorkerRenderer(1)
+    void r.render(48, 'bright', 48000, 2)
+    const warm = r.render(50, 'bright', 48000, 2)
+    const tap = r.render(50, 'bright', 44100, 0)
+    expect(tap).toBe(warm)
+    const [w] = FakeWorker.all
+    w!.reply()
+    w!.reply()
+    expect(midis(w!)).toEqual([48, 50])
+    await expect(tap).resolves.toMatchObject({ sampleRate: 48000 })
   })
 
   it('rejects everything when a worker dies', async () => {

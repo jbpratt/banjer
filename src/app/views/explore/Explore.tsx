@@ -33,6 +33,8 @@ interface Notice {
   mode: ExploreMode
   /** Shown while the route still points at the fallback it was replaced with. */
   subject: string
+  /** The route has reached `subject`; leaving it afterwards dismisses the notice. */
+  seen: boolean
 }
 
 export function Explore({ content, settings, route, onRoute }: Props) {
@@ -57,7 +59,7 @@ export function Explore({ content, settings, route, onRoute }: Props) {
     if (!r.replace) return
     if (r.unknown) {
       const what = mode === 'chords' ? 'chord' : 'key'
-      setNotice({ text: `Unknown ${what} “${r.unknown}” — showing ${mode === 'chords' ? 'G' : 'G major'}.`, mode, subject: r.replace })
+      setNotice({ text: `Unknown ${what} “${r.unknown}” — showing ${mode === 'chords' ? 'G' : 'G major'}.`, mode, subject: r.replace, seen: false })
     }
     onRoute({ view: 'explore', mode, subject: r.replace })
     // onRoute is a fresh closure each render; the route is what matters.
@@ -68,7 +70,12 @@ export function Explore({ content, settings, route, onRoute }: Props) {
     document.title = exploreTitle(mode, symbol, key.value)
   }, [mode, symbol, key.value])
 
-  const showNotice = notice && notice.mode === mode && notice.subject === route.subject
+  // Once the replace lands, the notice belongs to that visit: navigating away and back to
+  // the same fallback (G13 → G → G7 → G) must not bring it back.
+  const atNotice = notice !== null && notice.mode === mode && notice.subject === route.subject
+  if (notice && atNotice && !notice.seen) setNotice({ ...notice, seen: true })
+  else if (notice?.seen && !atNotice) setNotice(null)
+  const showNotice = atNotice
   const lastRoot = lastChord ? parseChord(lastChord)?.root : undefined
   const tabSubject = (m: ExploreMode): string | undefined => {
     if (m === 'chords') return mode === 'chords' ? symbol : (lastChord ?? (mode === 'keys' ? key.value : undefined))

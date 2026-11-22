@@ -13,14 +13,22 @@ export interface RenderRequest {
 
 export type RenderReply = { id: number; samples: Float32Array<ArrayBuffer> } | { id: number; error: string }
 
+/** A rendered pluck and the rate it was rendered at, which may not be the rate asked for. */
+export interface Rendered {
+  samples: Float32Array<ArrayBuffer>
+  sampleRate: number
+}
+
 /** Renders plucks asynchronously. The engine falls back to rendering inline without one. */
 export interface PluckRenderer {
   /**
    * Render one pluck. Lower `priority` renders first; equal priorities go in request order.
-   * A repeat request for a queued pitch returns the same promise and can raise its priority.
-   * Rejects if the workers die.
+   * A repeat request for a queued pitch returns the same promise and can raise its priority,
+   * even at another sample rate: a buffer plays at any rate, so a pitch warmed at the
+   * pre-context default isn't rendered again once the context reports its own. Build the
+   * buffer at the `sampleRate` in the result. Rejects if the workers die.
    */
-  render(midi: Midi, variant: Variant, sampleRate: number, priority?: number): Promise<Float32Array<ArrayBuffer>>
+  render(midi: Midi, variant: Variant, sampleRate: number, priority?: number): Promise<Rendered>
   /** Spawn the workers ahead of first use, so the first gesture doesn't pay for it. */
   start(): void
 }
@@ -31,8 +39,8 @@ export const BACKGROUND = 2
 interface Job extends RenderRequest {
   key: string
   priority: number
-  promise: Promise<Float32Array<ArrayBuffer>>
-  resolve(samples: Float32Array<ArrayBuffer>): void
+  promise: Promise<Rendered>
+  resolve(r: Rendered): void
   reject(err: Error): void
 }
 
@@ -74,7 +82,7 @@ export function createWorkerRenderer(size = poolSize()): PluckRenderer {
           slot.job = null
           if (job && job.id === e.data.id) {
             jobs.delete(job.key)
-            if ('samples' in e.data) job.resolve(e.data.samples)
+            if ('samples' in e.data) job.resolve({ samples: e.data.samples, sampleRate: job.sampleRate })
             else job.reject(new Error(e.data.error))
           }
           pump()
@@ -115,7 +123,7 @@ export function createWorkerRenderer(size = poolSize()): PluckRenderer {
     render(midi, variant, sampleRate, priority = 0) {
       start()
       if (dead) return Promise.reject(dead)
-      const key = `${variant}:${sampleRate}:${midi}`
+      const key = `${variant}:${midi}`
       let job = jobs.get(key)
       if (job) {
         const i = queue.indexOf(job)
@@ -129,7 +137,7 @@ export function createWorkerRenderer(size = poolSize()): PluckRenderer {
       }
       let resolve!: Job['resolve']
       let reject!: Job['reject']
-      const promise = new Promise<Float32Array<ArrayBuffer>>((res, rej) => {
+      const promise = new Promise<Rendered>((res, rej) => {
         resolve = res
         reject = rej
       })

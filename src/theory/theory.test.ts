@@ -12,6 +12,8 @@ import {
   positionsForMidi,
   prefersFlats,
   sameNotesAs,
+  simplestRoot,
+  hasDoubleAccidental,
   scaleNotes,
   scalePositions,
   simplifyNote,
@@ -55,6 +57,24 @@ describe('pitch', () => {
     expect(spellDegree('C', '9')).toBe('D')
     expect(spellDegree('Eb', '#5')).toBe('B')
     expect(spellDegree('Gb', '4')).toBe('Cb')
+  })
+
+  it('spells from the plain enharmonic root, never a stray letter, past a double accidental', () => {
+    expect(spellDegree('Fb', 'bb7')).toBe('Db') // E's 𝄫7, not a guess at E𝄫♭
+    expect(spellDegree('Fb', 'b3')).toBe('Abb') // still on Fb's letters when it can be
+    expect(chordNotes('Fb', 'dim7')).toEqual(['E', 'G', 'Bb', 'Db']) // one root for the whole chord
+    expect(chordNotes('Db', 'dim7')).toEqual(['Db', 'Fb', 'Abb', 'Cbb'])
+    expect(spellInChord('Fb', 'dim7', 1)).toBe('Db')
+  })
+
+  it('finds the simplest root for a chord', () => {
+    expect(simplestRoot('Db', 'dim7')).toBe('C#')
+    expect(simplestRoot('Ab', 'dim')).toBe('G#')
+    expect(simplestRoot('Db', '')).toBe('Db') // D♭ F A♭ beats C♯ E♯ G♯
+    expect(simplestRoot('C', 'dim7')).toBe('C') // B♯dim7 is no better
+    expect(simplestRoot('Fb', 'm')).toBe('E')
+    expect(hasDoubleAccidental('Db', 'dim7')).toBe(true)
+    expect(hasDoubleAccidental('C#', 'dim7')).toBe(false)
   })
 
   it('spells within a key by letter', () => {
@@ -191,7 +211,10 @@ describe('chords', () => {
     expect(names('A', 'm7')).toEqual(['C6'])
     expect(names('C', '6')).toEqual(['Am7'])
     expect(names('B', 'm7b5')).toEqual(['Dm6'])
-    expect(names('C', 'dim7')).toEqual(['Ebdim7', 'Gbdim7', 'Adim7'])
+    expect(names('C', 'dim7')).toEqual(['D#dim7', 'F#dim7', 'Adim7'])
+    // Not F♭dim7 (F♭ A𝄫 C𝄫 E♭𝄫): each root takes its simplest spelling.
+    expect(names('Db', 'dim7')).toEqual(['Edim7', 'Gdim7', 'A#dim7'])
+    for (const c of sameNotesAs('Db', 'dim7')) expect(chordNotes(c.root, c.quality).every((n) => !n.endsWith('bb'))).toBe(true)
     expect(names('C', 'sus2')).toEqual(['Gsus4'])
     expect(names('G', '')).toEqual([])
   })
