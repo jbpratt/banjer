@@ -10,6 +10,13 @@ Read `docs/PRINCIPLES.md` before changing anything; it defines the conventions b
 - `pnpm typecheck`: `tsc` (strict, `noUncheckedIndexedAccess`)
 - `pnpm build`: typecheck + production build
 
+## Deploy
+
+GitHub Pages at https://jbpratt.github.io/banjer/ via `.github/workflows/pages.yml`: pushes to `main`
+and PRs run install, typecheck, test, and build; a push to `main` then deploys `dist/`.
+`base: './'` keeps asset and worker URLs relative, so it works under any subpath. Node comes from
+`.nvmrc`; pnpm comes from `packageManager` in `package.json`.
+
 ## Layout
 
 | Path | What |
