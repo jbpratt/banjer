@@ -18,18 +18,22 @@ export function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(subscribeReduced, getReduced, () => false)
 }
 
-/** True while the element is narrower than `breakpoint` CSS px (default 600). */
-export function useIsNarrow(ref: RefObject<Element | null>, breakpoint = 600): boolean {
-  const [narrow, setNarrow] = useState(false)
+/**
+ * Live content-box width of an element in CSS px (0 until measured), plus the root font size,
+ * so callers can size SVG text in px. Re-measures when the element resizes.
+ */
+export function useElementWidth(ref: RefObject<Element | null>): { width: number; rem: number } {
+  const [size, setSize] = useState({ width: 0, rem: 16 })
   useEffect(() => {
     const el = ref.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0
-      if (w > 0) setNarrow(w < breakpoint)
+      const width = Math.round(entries[0]?.contentRect.width ?? 0)
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      if (width > 0) setSize((s) => (s.width === width && s.rem === rem ? s : { width, rem }))
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [ref, breakpoint])
-  return narrow
+  }, [ref])
+  return size
 }

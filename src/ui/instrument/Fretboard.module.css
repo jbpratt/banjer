@@ -15,9 +15,76 @@
 .svg {
   display: block;
   width: 100%;
+  max-width: none;
   height: auto;
-  max-height: 100%;
   overflow: visible;
+}
+
+/* The board picks its layout from its rendered scale (chooseBoard). When even the smallest
+   layout would draw text under 12px or cells too thin to tap, it keeps a readable size and
+   scrolls sideways instead, with edge fades as the hint. */
+.scroller {
+  min-width: 0;
+}
+
+.track {
+  position: relative;
+}
+
+.scroller[data-scroll] {
+  --fade-size: 2.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  /* Snapped and keyboard-focused cells never stop under a fade. */
+  scroll-padding-inline: var(--fade-size);
+  padding-block-end: var(--space-1);
+}
+
+.snaps {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.snaps span {
+  position: absolute;
+  inset-block: 0;
+  width: 1px;
+  scroll-snap-align: start;
+}
+
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroller[data-scroll] {
+    mask:
+      linear-gradient(black, black) no-clip subtract,
+      linear-gradient(to right, black, transparent) 0 0 / var(--fade-start) 100% no-repeat no-clip,
+      linear-gradient(to right, transparent, black) 100% 0 / var(--fade-end) 100% no-repeat no-clip;
+    animation: fb-reveal-fade-start linear both, fb-hide-fade-end linear both;
+    animation-timeline: scroll(self inline);
+    animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+  }
+}
+
+@keyframes fb-reveal-fade-start {
+  to { --fade-start: var(--fade-size); }
+}
+
+@keyframes fb-hide-fade-end {
+  from { --fade-end: var(--fade-size); }
 }
 
 .edge { fill: var(--fb-wood-edge); }

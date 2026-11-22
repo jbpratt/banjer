@@ -18,167 +18,8 @@
   color: var(--color-ink-muted);
 }
 
-.lead {
-  margin-bottom: var(--space-5);
-  font-family: var(--font-serif);
-  font-size: var(--font-size-lg);
-}
-
-.note {
-  margin-bottom: var(--space-5);
-  padding: var(--space-4) var(--space-5);
-  border-left: 3px solid var(--color-accent-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-raised);
-  font-family: var(--font-serif);
-  font-size: var(--font-size-lg);
-}
-
-.queue {
-  display: grid;
-  gap: var(--space-3);
-  list-style: none;
-  padding: 0;
-}
-
-.card {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
-  box-shadow: var(--shadow-1);
-}
-
-.cardHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.cardTitle {
-  display: block;
-  font-family: var(--font-serif);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-}
-
-.cardLink {
-  display: flex;
-  gap: var(--space-4);
-  align-items: baseline;
-  color: inherit;
-  text-decoration: none;
-}
-
-.cardLink:hover .cardTitle {
-  text-decoration: underline;
-}
-
-.order {
-  min-width: 2ch;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-ink-subtle);
-  font-variant-numeric: tabular-nums;
-}
-
-.claudeNote {
-  margin-top: var(--space-2);
-  font-family: var(--font-serif);
-  color: var(--color-ink-muted);
-}
-
-.items {
-  display: grid;
-  gap: var(--space-1);
-  margin-top: var(--space-3);
-  list-style: none;
-  padding: 0;
-}
-
-.itemRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  padding-block: var(--space-1);
-  border-top: 1px solid var(--color-border);
-}
-
-.itemLink {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  min-height: var(--hit-target);
-  align-content: center;
-  color: var(--color-ink);
-  text-decoration: none;
-}
-
-.itemLink:hover .itemTitle {
-  text-decoration: underline;
-}
-
-.itemTitle {
-  font-weight: var(--font-weight-semibold);
-}
-
-.kind {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-}
-
-.last {
-  font-size: var(--font-size-sm);
-  color: var(--color-ink-muted);
-}
-
-.last[data-rating='clean'] {
-  color: var(--color-status-clean);
-}
-
-.last[data-rating='shaky'] {
-  color: var(--color-status-shaky);
-}
-
-.last[data-rating='lost'] {
-  color: var(--color-status-lost);
-}
-
 .missing {
   color: var(--color-status-lost);
-}
-
-.start {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 4rem;
-  min-width: 14rem;
-  margin-top: var(--space-5);
-  padding-inline: var(--space-6);
-  border: 1px solid var(--color-accent-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  text-decoration: none;
-}
-
-.button {
-  min-height: var(--hit-target);
-  padding-inline: var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  font-weight: var(--font-weight-semibold);
 }
 
 .form {
@@ -215,12 +56,16 @@
 
 .field {
   display: grid;
+  /* minmax(0, …) so a long select can shrink to the field instead of overflowing it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
+  min-width: 0;
   font-weight: var(--font-weight-semibold);
 }
 
 .field select,
 .field input:not([type='range']) {
+  max-width: 100%;
   min-height: var(--hit-target);
   padding-inline: var(--space-2);
   border: 1px solid var(--color-border-strong);
@@ -249,7 +94,6 @@
 }
 
 .board {
-  min-height: 240px;
   margin-bottom: var(--space-2);
 }
 

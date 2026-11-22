@@ -3,11 +3,14 @@ import type { Setup } from '../../domain/types.ts'
 import {
   BOARD_COMPACT,
   BOARD_DESKTOP,
+  BOARD_MEDIUM,
+  MIN_TEXT_PX,
   boardGeometry,
   boardViewBox,
   capoGeometry,
   cellCenterX,
   cellWidth,
+  chooseBoard,
   displayLabel,
   fifthStringGeometry,
   fretWireX,
@@ -23,8 +26,10 @@ import {
   roundedPolygonPath,
   rulerFrets,
   spikeGeometry,
+  spokenLabel,
   spokenNote,
   stringY,
+  targetName,
   trianglePoints,
 } from './fretboardGeometry.ts'
 
@@ -250,8 +255,79 @@ describe('marker shapes and labels', () => {
     expect(displayLabel('b7')).toBe('♭7')
     expect(displayLabel('C#')).toBe('C♯')
     expect(displayLabel('B')).toBe('B')
+    expect(displayLabel('Bm7b5')).toBe('Bm7♭5')
+    expect(displayLabel('bb7')).toBe('♭♭7')
     expect(spokenNote('A#3')).toBe('A sharp 3')
     expect(spokenNote('Bb')).toBe('B flat')
     expect(spokenNote('G3')).toBe('G3')
+  })
+})
+
+describe('chooseBoard', () => {
+  const lab: [number, number] = [0, 15]
+
+  it('uses the desktop board when it renders text at full size', () => {
+    expect(chooseBoard(1152, lab)).toMatchObject({ layout: BOARD_DESKTOP, scroll: false })
+  })
+
+  it('never squeezes the desktop board below readable text (the old 768px bug)', () => {
+    const c = chooseBoard(720, lab)
+    expect(c.scroll || c.layout !== BOARD_DESKTOP).toBe(true)
+    expect(c.width / c.layout.width).toBeGreaterThanOrEqual(0.85)
+    expect(chooseBoard(976, lab).layout).toBe(BOARD_MEDIUM)
+  })
+
+  it('keeps every fitted choice at ≥ 12px text', () => {
+    for (let w = 360; w <= 1400; w += 20) {
+      for (const frets of [lab, [0, 12], [0, 7], [5, 12]] as [number, number][]) {
+        const c = chooseBoard(w, frets)
+        const g = boardGeometry(c.layout, frets)
+        const scale = c.width / c.layout.width
+        expect(Math.min(14, 0.42 * g.d) * scale).toBeGreaterThanOrEqual(MIN_TEXT_PX - 1e-9)
+      }
+    }
+  })
+
+  it('scrolls on phones, with tappable cells', () => {
+    const c = chooseBoard(343, lab)
+    expect(c.scroll).toBe(true)
+    expect(c.width).toBeGreaterThan(343)
+    const g = boardGeometry(c.layout, lab)
+    expect((cellWidth(g, 15) * c.width) / c.layout.width).toBeGreaterThanOrEqual(36 - 0.5)
+  })
+
+  it('fits a short window on a phone without scrolling', () => {
+    expect(chooseBoard(400, [0, 5]).scroll).toBe(false)
+  })
+
+  it('accounts for the root font size (ruler numerals are 0.875rem)', () => {
+    expect(chooseBoard(1152, lab, 2, 10).layout).not.toBe(BOARD_DESKTOP)
+  })
+})
+
+describe('accessible names for positions', () => {
+  it('speaks labels', () => {
+    expect(spokenLabel('B♭')).toBe('B flat')
+    expect(spokenLabel('F#')).toBe('F sharp')
+    expect(spokenLabel('♭7')).toBe('flat 7th')
+    expect(spokenLabel('b3')).toBe('flat 3rd')
+    expect(spokenLabel('R')).toBe('root')
+    expect(spokenLabel('5')).toBe('5th')
+    expect(spokenLabel('2')).toBe('2nd')
+    expect(spokenLabel('𝄫7')).toBe('double flat 7th')
+  })
+
+  it('spells from the marker, with degree and state', () => {
+    expect(targetName(1, 3, 'F4', { pos: { string: 1, fret: 3 }, role: 'chord', label: '♭7', spoken: 'F' })).toBe(
+      'string 1, fret 3, F 4, flat 7th, chord tone',
+    )
+    expect(
+      targetName(2, 3, 'A#3', { pos: { string: 2, fret: 3 }, role: 'chord', label: 'B♭', state: 'dim', stateText: 'other position' }),
+    ).toBe('string 2, fret 3, B flat 3, chord tone, other position')
+    expect(targetName(3, 0, 'G3', { pos: { string: 3, fret: 0 }, role: 'root', label: 'R' })).toBe('string 3, open, G 3, root')
+    expect(targetName(1, 1, 'D#4', undefined)).toBe('string 1, fret 1, D sharp 4')
+    expect(targetName(1, 1, 'D#4', { pos: { string: 1, fret: 1 }, role: 'chord', spoken: 'E flat', state: 'next' })).toBe(
+      'string 1, fret 1, E flat 4, chord tone, ghost',
+    )
   })
 })

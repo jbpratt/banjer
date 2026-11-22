@@ -1,14 +1,15 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { StringNum } from '../../domain/types.ts'
-import { STRINGS, noteName, openMidi, pitchClass, soundingMidi, spell } from '../../theory/index.ts'
+import { STRINGS, neckFret, noteName, openMidi, pitchClass, soundingMidi, spell } from '../../theory/index.ts'
 import {
-  BOARD_COMPACT,
   BOARD_DESKTOP,
   boardGeometry,
   boardViewBox,
   capoGeometry,
+  chooseBoard,
   displayLabel,
   fifthStringGeometry,
+  fretWireX,
   fretWires,
   hitTargets,
   inlays,
@@ -18,14 +19,14 @@ import {
   navigateTarget,
   rulerFrets,
   spikeGeometry,
-  spokenNote,
   stringY,
+  targetName,
   type BoardGeometry,
 } from './fretboardGeometry.ts'
-import { useIsNarrow } from './hooks.ts'
+import { useElementWidth, usePrefersReducedMotion } from './hooks.ts'
 import { MarkerGlyph } from './Marker.tsx'
 import { RoleLegend } from './RoleLegend.tsx'
-import type { FretMarker, FretboardProps, MarkerRole } from './types.ts'
+import type { FretMarker, FretboardProps } from './types.ts'
 import styles from './Fretboard.module.css'
 
 const STRING_WIDTH: Readonly<Record<StringNum, string>> = {
@@ -37,15 +38,8 @@ const STRING_WIDTH: Readonly<Record<StringNum, string>> = {
 }
 
 const Z_ORDER: Record<string, number> = { dim: 0, rest: 1, next: 2, active: 3 }
+const z = (m: FretMarker) => Z_ORDER[m.state ?? 'rest'] ?? 1
 
-const ROLE_WORD: Readonly<Record<MarkerRole, string>> = {
-  root: 'root',
-  chord: 'chord tone',
-  scale: 'scale tone',
-  melody: 'melody',
-  thumb: 'thumb',
-  muted: 'muted',
-}
 
 /** x of the board's slanted right edge at height y. */
 function rightEdgeAt(g: BoardGeometry, y: number): number {
@@ -71,13 +65,21 @@ export function Fretboard({
   frets,
   leftHanded = false,
   showOpenNames = true,
+  focusFret,
   onSelect,
   label,
   className,
 }: FretboardProps) {
   const figRef = useRef<HTMLElement>(null)
-  const narrow = useIsNarrow(figRef)
-  const layout = narrow ? BOARD_COMPACT : BOARD_DESKTOP
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const reduced = usePrefersReducedMotion()
+  const measured = useElementWidth(figRef)
+  const labelChars = Math.max(0, ...markers.map((m) => (m.label && m.role !== 'muted' && m.state !== 'dim' ? displayLabel(m.label).length : 0)))
+  // Until measured, draw the desktop board at 100% (the pre-measure default).
+  const choice = measured.width
+    ? chooseBoard(measured.width, frets, labelChars, measured.rem)
+    : { layout: BOARD_DESKTOP, scroll: false, width: 0 }
+  const { layout, scroll } = choice
   const g = useMemo(() => boardGeometry(layout, frets), [layout, frets])
   const uid = useId().replace(/:/g, '')
   const gradId = `fb-wood-${uid}`
@@ -96,7 +98,7 @@ export function Fretboard({
   const placed = markers
     .map((m, i) => ({ m, i, p: markerPoint(g, setup, m.pos) }))
     .filter((e): e is { m: FretMarker; i: number; p: { x: number; y: number } } => e.p !== null)
-    .sort((a, b) => (Z_ORDER[a.m.state ?? 'rest'] ?? 1) - (Z_ORDER[b.m.state ?? 'rest'] ?? 1))
+    .sort((a, b) => z(a.m) - z(b.m))
 
   // Hit targets (explorer mode).
   const targets = useMemo(() => (onSelect ? hitTargets(g, setup) : []), [onSelect, g, setup])
@@ -112,7 +114,9 @@ export function Fretboard({
       const next = navigateTarget(targets, i, dir, leftHanded)
       if (next >= 0) {
         setCursor(next)
-        targetRefs.current[next]?.focus()
+        const el = targetRefs.current[next]
+        el?.focus({ preventScroll: true })
+        el?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
       }
       return
     }
@@ -124,11 +128,57 @@ export function Fretboard({
   }
 
   const rolesShown = [...new Set(markers.map((m) => m.role))]
-  const markerAt = (string: number, fret: number) => markers.find((m) => m.pos.string === string && m.pos.fret === fret)
+  // Several markers can share a cell (a dim shape under the selected one): name the most prominent.
+  const markerAt = (string: number, fret: number) =>
+    markers.filter((m) => m.pos.string === string && m.pos.fret === fret).sort((p, q) => z(q) - z(p))[0]
+
+  // On a scrolling board, keep the interesting frets in view: [lo, hi] neck frets.
+  const focusRange = useMemo((): [number, number] | undefined => {
+    if (focusFret !== undefined) return [focusFret, focusFret]
+    const active = markers.filter((m) => m.state === 'active')
+    const bold = markers.some((m) => m.state === 'dim') ? markers.filter((m) => m.state === undefined) : []
+    const set = active.length > 0 ? active : bold
+    if (set.length === 0) return undefined
+    // The 5th string's open drone sits at its peg wherever the shape is; leave it out.
+    const ns = set.filter((m) => m.pos.string !== 5 || m.pos.fret > 0).map((m) => neckFret(setup, m.pos))
+    if (ns.length === 0) return undefined
+    const lo = Math.min(...ns)
+    const hi = Math.max(...ns)
+    return hi - lo <= 5 ? [lo, hi] : undefined
+  }, [focusFret, markers, setup])
+
+  const crop = showOpenNames ? 0 : layout.gutter - layout.narrowGutter
+  const vbMinX = leftHanded ? 0 : crop
+  const vbWidth = W - crop
+  // Screen-space span of a fret range, as fractions of the board's width (nut lane for fret 0).
+  const frac = (x: number) => (X(x) - vbMinX) / vbWidth
+  const fretEdges = (n: number): [number, number] => {
+    if (n <= 0 || n < g.lo) return g.hasNut ? [layout.laneStart, layout.nutEnd] : [g.X0, g.X0]
+    const k = Math.min(g.hi, Math.round(n))
+    return [fretWireX(g, k - 1), fretWireX(g, k)]
+  }
+  const span = focusRange && [...fretEdges(focusRange[0]), ...fretEdges(focusRange[1])].map(frac)
+  const focusLo = span ? Math.min(...span) : undefined
+  const focusHi = span ? Math.max(...span) : undefined
+  const scrolledOnce = useRef(false)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!scroll || !el || focusLo === undefined || focusHi === undefined) return
+    const pad = 48
+    const lo = focusLo * el.scrollWidth
+    const hi = focusHi * el.scrollWidth
+    // Centre the range, but never push its start (or, if it fits, its end) out of view.
+    const centred = (lo + hi) / 2 - el.clientWidth / 2
+    const left = hi - lo + 2 * pad <= el.clientWidth ? Math.min(lo - pad, Math.max(hi + pad - el.clientWidth, centred)) : lo - pad
+    el.scrollTo({ left, behavior: scrolledOnce.current && !reduced ? 'smooth' : 'auto' })
+    scrolledOnce.current = true
+  }, [scroll, focusLo, focusHi, reduced, choice.width])
 
   return (
     <figure ref={figRef} className={[styles.figure, className].filter(Boolean).join(' ')}>
       {rolesShown.length > 0 && <RoleLegend roles={rolesShown} className={styles.legend} />}
+      <div ref={scrollRef} className={styles.scroller} data-scroll={scroll || undefined}>
+      <div className={styles.track} style={scroll ? { minInlineSize: `${choice.width}px` } : undefined}>
       <svg
         className={styles.svg}
         viewBox={boardViewBox(layout, showOpenNames, leftHanded)}
@@ -297,9 +347,8 @@ export function Fretboard({
         {/* 11. Hit targets and keyboard cursor */}
         {onSelect &&
           targets.map((t, i) => {
-            const midi = soundingMidi(setup, t.pos)
             const mk = markerAt(t.pos.string, t.pos.fret)
-            const name = `string ${t.pos.string}, ${t.pos.fret === 0 ? 'open' : `fret ${t.pos.fret}`}, ${spokenNote(noteName(midi))}${mk ? `, ${ROLE_WORD[mk.role]}` : ''}`
+            const name = targetName(t.pos.string, t.pos.fret, noteName(soundingMidi(setup, t.pos)), mk)
             const ringR = (mk ? markerRadius(mk.role, d) : d / 2) + 6
             return (
               <g
@@ -324,6 +373,16 @@ export function Fretboard({
             )
           })}
       </svg>
+      {scroll && (
+        <div className={styles.snaps} aria-hidden="true">
+          {[{ n: 0, x: g.hasNut ? layout.gutter : g.X0 }, ...rulerFrets(g)].map(({ n, x }) => (
+            <span key={n} style={{ insetInlineStart: `${((mirrorX(layout, x, leftHanded) - vbMinX) / vbWidth) * 100}%` }} />
+          ))}
+        </div>
+      )}
+      </div>
+      </div>
     </figure>
   )
 }
+

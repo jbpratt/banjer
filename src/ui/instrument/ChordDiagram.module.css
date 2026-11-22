@@ -68,8 +68,12 @@
 .position {
   fill: var(--color-ink-muted);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12px; /* CHORD_POSITION_FONT; chordLayout keeps it clear of the string-4 dot */
   font-weight: var(--font-weight-semibold);
+}
+
+.positionSuffix {
+  font-size: 9px; /* CHORD_POSITION_SUFFIX_FONT */
 }
 
 .openRoot,
@@ -119,7 +123,15 @@
   font-size: 9px; /* ≈14 CSS px at the lg width */
 }
 
-/* highlight: an accent halo, e.g. the note that moved from the major shape */
+/* highlight: an accent halo plus a dashed outer ring (shape, not only colour), e.g. the
+   note that moved from the major shape */
+.litRing {
+  fill: none;
+  stroke: var(--color-accent-strong);
+  stroke-width: 1.5px;
+  stroke-dasharray: 3 2.5;
+}
+
 .lit .dot {
   stroke: var(--color-accent-strong);
   stroke-width: 3px;

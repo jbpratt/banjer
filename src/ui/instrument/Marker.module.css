@@ -77,9 +77,16 @@
 
 .ghost .cross { stroke-dasharray: 3 3; }
 
-/* dim: context. */
-.dim {
-  opacity: var(--marker-dim-opacity);
+/* dim: context. Only the fill fades; a full-strength ring in the role colour keeps the
+   marker ≥3:1 against the wood (WCAG 1.4.11) and sets it apart from the grey inlay dots. */
+.dim .shape {
+  fill-opacity: var(--marker-dim-fill-opacity);
+  stroke: var(--m-fill);
+  stroke-width: 2.5px;
+}
+
+.dim.scale .shape {
+  fill-opacity: 1;
 }
 
 .dim .body {

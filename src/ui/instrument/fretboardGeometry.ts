@@ -13,7 +13,7 @@ import {
   fretX,
   neckFret,
 } from '../../theory/index.ts'
-import type { MarkerRole } from './types.ts'
+import type { FretMarker, MarkerRole, MarkerState } from './types.ts'
 
 export interface BoardLayout {
   width: number
@@ -95,7 +95,81 @@ export const BOARD_COMPACT: BoardLayout = {
   narrowGutter: 8,
 }
 
+/** Between the two: tablets and narrow desktop columns. */
+export const BOARD_MEDIUM: BoardLayout = {
+  width: 800,
+  height: 266,
+  s: 46,
+  gutter: 36,
+  nameX: 18,
+  laneStart: 36,
+  laneEnd: 76,
+  openX: 56,
+  nutStart: 76,
+  nutEnd: 84,
+  x0: 84,
+  x1: 728,
+  x0Up: 44,
+  breakEnd: 738,
+  strikeEnd: 792,
+  boardTop: 22,
+  boardBottom: 252,
+  rulerBaseline: 15,
+  slant: 7,
+  narrowGutter: 10,
+}
+
 export const DEFAULT_FRETS: readonly [number, number] = [0, 12]
+
+/** Smallest rendered text (CSS px) the board may draw: ruler numerals and marker labels. */
+export const MIN_TEXT_PX = 12
+/** Narrowest fret cell (CSS px) when the board fits its container: WCAG 2.5.8 minimum target. */
+export const MIN_CELL_FIT_PX = 24
+/** Narrowest fret cell (CSS px) once the board scrolls: a comfortable touch target. */
+export const MIN_CELL_SCROLL_PX = 36
+
+export interface BoardChoice {
+  layout: BoardLayout
+  /** True when the board is wider than its container and must scroll sideways. */
+  scroll: boolean
+  /** Rendered width in CSS px when scrolling (the svg's min-inline-size); otherwise the container width. */
+  width: number
+}
+
+/**
+ * Pick the layout from the scale it will actually render at. Text is drawn in user units, so
+ * a 1200-wide board squeezed into 700px draws 14-unit numerals at 8px. Each layout needs a
+ * minimum rendered width so its smallest text is ≥ MIN_TEXT_PX and its narrowest fret cell
+ * is tappable; the widest layout that fits the container wins. When none fits (phones), the
+ * board scrolls at whichever layout needs the least width.
+ *
+ * `rem` is the root font size in CSS px (ruler numerals are 0.875rem); `labelChars` is the
+ * longest marker label (1 or 2), since two-character labels are drawn smaller.
+ */
+export function chooseBoard(
+  containerWidth: number,
+  frets: readonly [number, number] | undefined,
+  labelChars = 2,
+  rem = 16,
+): BoardChoice {
+  const need = (layout: BoardLayout, minCell: number) => {
+    const g = boardGeometry(layout, frets)
+    const narrowest = cellWidth(g, g.b)
+    const labelUnits = (labelChars > 1 ? 0.42 : labelChars === 1 ? 0.5 : Infinity) * g.d
+    const textUnits = Math.min(0.875 * rem, labelUnits)
+    const scale = Math.max(MIN_TEXT_PX / textUnits, minCell / narrowest)
+    return layout.width * scale
+  }
+  for (const layout of [BOARD_DESKTOP, BOARD_MEDIUM, BOARD_COMPACT]) {
+    if (need(layout, MIN_CELL_FIT_PX) <= containerWidth) return { layout, scroll: false, width: containerWidth }
+  }
+  let best: BoardChoice = { layout: BOARD_DESKTOP, scroll: true, width: Infinity }
+  for (const layout of [BOARD_DESKTOP, BOARD_MEDIUM, BOARD_COMPACT]) {
+    const width = Math.ceil(need(layout, MIN_CELL_SCROLL_PX))
+    if (width < best.width) best = { layout, scroll: true, width }
+  }
+  return best
+}
 
 export interface BoardGeometry {
   layout: BoardLayout
@@ -453,10 +527,74 @@ export function badgeOffset(d: number, leftHanded = false): { dx: number; dy: nu
 
 /** Display form of a label: ASCII accidentals become ♯/♭ ("Bb" → "B♭", "b7" → "♭7"). */
 export function displayLabel(label: string): string {
-  return label.replace(/#/g, '♯').replace(/(^|[A-G])b/g, '$1♭')
+  // Labels are notes, degrees and chord symbols; no suffix (m, maj, dim, sus, add) contains a 'b'.
+  return label.replace(/#/g, '♯').replace(/b/g, '♭')
 }
 
 /** Spoken form of a note name: "A#3" → "A sharp 3", "Bb" → "B flat". */
 export function spokenNote(name: string): string {
   return name.replace(/^([A-G])#/, '$1 sharp ').replace(/^([A-G])b/, '$1 flat ').replace(/\s+$/, '').replace(/ (\d)/, ' $1')
+}
+
+const ACCIDENTAL_WORDS: Readonly<Record<string, string>> = {
+  '#': 'sharp',
+  '♯': 'sharp',
+  b: 'flat',
+  '♭': 'flat',
+  bb: 'double flat',
+  '𝄫': 'double flat',
+  '𝄪': 'double sharp',
+  '##': 'double sharp',
+}
+
+/** Whether a marker label is a note name ("B♭", "F#") rather than a degree or finger. */
+export function isNoteLabel(label: string): boolean {
+  return /^[A-G](##|#|♯|bb|b|♭|𝄫|𝄪)?$/u.test(label)
+}
+
+/**
+ * Spoken form of a marker label: "B♭" → "B flat", "♭7" → "flat 7th", "R" → "root",
+ * "3" → "3rd". Anything else is returned as is.
+ */
+export function spokenLabel(label: string): string {
+  if (isNoteLabel(label)) {
+    const acc = label.slice(1)
+    return acc ? `${label[0]} ${ACCIDENTAL_WORDS[acc] ?? acc}` : label
+  }
+  if (label === 'R' || label === '1') return 'root'
+  const m = /^(bb|b|##|#|♭|♯|𝄫|𝄪)?(\d+)$/u.exec(label)
+  if (!m) return label
+  const n = Number(m[2])
+  const ord = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'
+  return `${m[1] ? `${ACCIDENTAL_WORDS[m[1]]} ` : ''}${n}${ord}`
+}
+
+const ROLE_WORD: Readonly<Record<MarkerRole, string>> = {
+  root: 'root',
+  chord: 'chord tone',
+  scale: 'scale tone',
+  melody: 'melody',
+  thumb: 'thumb',
+  muted: 'muted',
+}
+
+const STATE_WORD: Readonly<Record<MarkerState, string>> = { active: 'sounding', next: 'ghost', dim: 'faint' }
+
+/**
+ * "string 2, fret 3, D 4, flat 7th, chord tone, selected shape". The note is spelled by the
+ * marker (`spoken`, or a note-name label) when it has one; the octave comes from the pitch.
+ */
+export function targetName(string: number, fret: number, pitch: string, mk: FretMarker | undefined): string {
+  const octave = /-?\d+$/.exec(pitch)?.[0] ?? ''
+  const label = mk?.label && mk.role !== 'muted' ? mk.label : undefined
+  const spelled = mk?.spoken ?? (label && isNoteLabel(label) ? spokenLabel(label) : undefined)
+  const name = spelled ?? spokenLabel(pitch.slice(0, pitch.length - octave.length))
+  const note = /\d/.test(name) ? name : `${name} ${octave}`
+  const degree = label && !isNoteLabel(label) ? spokenLabel(label) : undefined
+  const parts = [`string ${string}`, fret === 0 ? 'open' : `fret ${fret}`, note]
+  if (degree && degree !== 'root') parts.push(degree)
+  if (mk) parts.push(ROLE_WORD[mk.role])
+  const state = mk?.stateText ?? (mk?.state ? STATE_WORD[mk.state] : undefined)
+  if (state) parts.push(state)
+  return parts.join(', ')
 }

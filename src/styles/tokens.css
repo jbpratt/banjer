@@ -2,11 +2,9 @@
  * Banjer design tokens — "luthier's bench".
  * Spec and rationale: docs/research/design.md. Contrast ratios are listed there.
  *
- * Theming:
- *   - Light is the default.
- *   - Dark applies when the OS prefers dark, unless <html data-theme="light">.
- *   - <html data-theme="dark"> forces dark.
- *   The two dark blocks below must stay identical.
+ * Theming: each themed token is light-dark(light, dark), resolved by the used
+ * `color-scheme`. :root follows the OS (light dark); <html data-theme="light|dark">
+ * (the Settings theme) pins one scheme. Untinted tokens are the same in both.
  *
  * The fretboard is always dark wood, so its material and role-fill tokens do
  * not change with the theme. `--role-*-ink` variants are for strokes and text
@@ -14,36 +12,36 @@
  */
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 
-  /* ── Surfaces and ink (light: warm paper) ─────────────────────────────── */
-  --color-surface: #f3ece0;          /* page: warm paper */
-  --color-surface-sunken: #e9e0d1;   /* bench: wells, tab strip, inputs */
-  --color-surface-raised: #fbf7f0;   /* cards, popovers, dialogs */
-  --color-ink: #2b2019;              /* primary text: walnut ink */
-  --color-ink-muted: #66564a;        /* secondary text (AA on every surface) */
-  --color-ink-subtle: #8a7a6c;       /* ≥3:1 only: large text, icons, placeholders */
-  --color-border: #d8cdbb;           /* decorative hairlines and dividers */
-  --color-border-strong: #8c7b6c;    /* control outlines, tab lines (≥3:1) */
-  --color-scrim: rgb(32 22 15 / 0.5);
-  --color-selection: #f5dfb8;
+  /* ── Surfaces and ink (light: warm paper; dark: ebony and walnut) ─────── */
+  --color-surface: light-dark(#f3ece0, #1a1411);          /* page: warm paper */
+  --color-surface-sunken: light-dark(#e9e0d1, #120e0c);   /* bench: wells, tab strip, inputs */
+  --color-surface-raised: light-dark(#fbf7f0, #241c17);   /* cards, popovers, dialogs */
+  --color-ink: light-dark(#2b2019, #eee5d6);              /* primary text: walnut ink */
+  --color-ink-muted: light-dark(#66564a, #b9aa97);        /* secondary text (AA on every surface) */
+  --color-ink-subtle: light-dark(#8a7a6c, #8d7e6e);       /* ≥3:1 only: large text, icons, placeholders */
+  --color-border: light-dark(#d8cdbb, #3a2f27);           /* decorative hairlines and dividers */
+  --color-border-strong: light-dark(#8c7b6c, #7d6d5e);    /* control outlines, tab lines (≥3:1) */
+  --color-scrim: light-dark(rgb(32 22 15 / 0.5), rgb(0 0 0 / 0.6));
+  --color-selection: light-dark(#f5dfb8, #3b2a12);
 
   /* The one accent: brass/amber. It also marks "now" (playhead, active step). */
   --color-accent: #e69f00;           /* fills: primary button, beat dot, melody */
-  --color-accent-strong: #8f5600;    /* accent as text or line on a surface */
-  --color-accent-soft: #f5dfb8;      /* current-step band, selected rows */
+  --color-accent-strong: light-dark(#8f5600, #f2b44c);    /* accent as text or line on a surface */
+  --color-accent-soft: light-dark(#f5dfb8, #3b2a12);      /* current-step band, selected rows */
   --color-on-accent: #1f160f;        /* text on --color-accent */
 
   /* Focus is deliberately not the accent, so it never reads as "now". */
-  --color-focus: #1f5fa8;
+  --color-focus: light-dark(#1f5fa8, #8cc4f2);
 
   /* Self-rating (always paired with an icon and a word). */
-  --color-status-clean: #1f6e4a;
-  --color-status-clean-soft: #dcebdf;
-  --color-status-shaky: #7a5f00;
-  --color-status-shaky-soft: #f1e6be;
-  --color-status-lost: #a63a2a;
-  --color-status-lost-soft: #f5dcd3;
+  --color-status-clean: light-dark(#1f6e4a, #6cc59a);
+  --color-status-clean-soft: light-dark(#dcebdf, #17291f);
+  --color-status-shaky: light-dark(#7a5f00, #d9c25a);
+  --color-status-shaky-soft: light-dark(#f1e6be, #2c2610);
+  --color-status-lost: light-dark(#a63a2a, #f08a70);
+  --color-status-lost-soft: light-dark(#f5dcd3, #33191a);
 
   /* ── Marker roles (fills; Okabe–Ito; theme-independent) ───────────────── */
   --role-root: #d55e00;     /* vermilion · square   */
@@ -55,17 +53,17 @@
   --role-on: #1a120d;       /* label text on any role fill */
 
   /* Role colors for strokes/text on page surfaces (chord diagrams, legends). */
-  --role-root-ink: #a04300;
-  --role-chord-ink: #1b6393;
-  --role-scale-ink: #006e53;
-  --role-melody-ink: #8f5600;
-  --role-thumb-ink: #9a4174;
-  --role-muted-ink: #66564a;
+  --role-root-ink: light-dark(#a04300, #e2701f);
+  --role-chord-ink: light-dark(#1b6393, #56b4e9);
+  --role-scale-ink: light-dark(#006e53, #1fb38a);
+  --role-melody-ink: light-dark(#8f5600, #e69f00);
+  --role-thumb-ink: light-dark(#9a4174, #cc79a7);
+  --role-muted-ink: light-dark(#66564a, #b9aa97);
 
   /* Outline that gives a role fill its edge on a page surface. */
   --marker-outline: var(--color-ink);
   --marker-outline-width: 2px;
-  --marker-dim-opacity: 0.4;
+  --marker-dim-fill-opacity: 0.35;
   --marker-active-scale: 1.12;
   --marker-dim-scale: 0.86;
   --marker-ghost-dash: 5 4;
@@ -92,7 +90,6 @@
   --fb-badge-ink: #1a120d;
   --fb-marker-outline: #140c08;
   --fb-focus: #8cc4f2;              /* keyboard cursor on the board */
-  --fb-shadow: 0 2px 4px rgb(43 32 25 / 0.18), 0 10px 28px rgb(43 32 25 / 0.14);
 
   /* Geometry in SVG user units (the design viewBox is 1200 wide). */
   --fb-string-1-width: 2.25px;      /* .010 */
@@ -114,15 +111,13 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono",
     "Roboto Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
 
-  --font-size-xs: 0.75rem;     /* 12 — metadata only, never in the practice view */
+  --font-size-xs: 0.75rem;     /* 12 — metadata only */
   --font-size-sm: 0.875rem;    /* 14 */
   --font-size-md: 1rem;        /* 16 — body at arm's length */
-  --font-size-lg: 1.25rem;     /* 20 — practice-view minimum */
+  --font-size-lg: 1.25rem;     /* 20 */
   --font-size-xl: 1.5rem;      /* 24 */
   --font-size-2xl: 2rem;       /* 32 — chord name, item title */
   --font-size-3xl: 2.75rem;    /* 44 */
-  --font-size-glance-next: clamp(1.5rem, 1rem + 1.75vw, 2.25rem);  /* 24–36 */
-  --font-size-glance: clamp(3rem, 1.5rem + 5vw, 6rem);              /* 48–96; 88 @1280 */
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -134,7 +129,6 @@
   --leading-snug: 1.3;
   --leading-normal: 1.5;
 
-  --tracking-glance: -0.015em;
   --tracking-caps: 0.08em;
 
   /* ── Space (4px base) ─────────────────────────────────────────────────── */
@@ -153,9 +147,7 @@
   --layout-gap: var(--space-2);
   --layout-max-width: 1440px;
   --header-height: 3rem;          /* 48 */
-  --transport-height: 4.5rem;     /* 72 */
   --hit-target: 2.75rem;          /* 44 — any pointer target */
-  --hit-target-practice: 3rem;    /* 48 — transport and rating buttons */
 
   /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius-xs: 2px;
@@ -165,9 +157,12 @@
   --radius-pill: 999px;
 
   /* ── Elevation ────────────────────────────────────────────────────────── */
-  --shadow-1: 0 1px 2px rgb(43 32 25 / 0.1), 0 1px 1px rgb(43 32 25 / 0.06);
-  --shadow-2: 0 4px 12px rgb(43 32 25 / 0.12), 0 1px 3px rgb(43 32 25 / 0.08);
-  --shadow-3: 0 12px 32px rgb(43 32 25 / 0.18), 0 2px 6px rgb(43 32 25 / 0.1);
+  --shadow-1: 0 1px 2px light-dark(rgb(43 32 25 / 0.1), rgb(0 0 0 / 0.5)),
+    0 1px 1px light-dark(rgb(43 32 25 / 0.06), transparent);
+  --shadow-2: 0 4px 12px light-dark(rgb(43 32 25 / 0.12), rgb(0 0 0 / 0.5)),
+    0 1px 3px light-dark(rgb(43 32 25 / 0.08), rgb(0 0 0 / 0.4));
+  --shadow-3: 0 12px 32px light-dark(rgb(43 32 25 / 0.18), rgb(0 0 0 / 0.6)),
+    0 2px 6px light-dark(rgb(43 32 25 / 0.1), rgb(0 0 0 / 0.4));
 
   --z-sticky: 10;
   --z-overlay: 100;
@@ -187,96 +182,12 @@
   --ease-linear: linear;
 }
 
-/* ── Dark: ebony and walnut (OS preference) ─────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
+/* The Settings theme pins a scheme; "Match system" removes the attribute. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
-    --color-surface: #1a1411;
-    --color-surface-sunken: #120e0c;
-    --color-surface-raised: #241c17;
-    --color-ink: #eee5d6;
-    --color-ink-muted: #b9aa97;
-    --color-ink-subtle: #8d7e6e;
-    --color-border: #3a2f27;
-    --color-border-strong: #7d6d5e;
-    --color-scrim: rgb(0 0 0 / 0.6);
-    --color-selection: #3b2a12;
-
-    --color-accent: #e69f00;
-    --color-accent-strong: #f2b44c;
-    --color-accent-soft: #3b2a12;
-    --color-on-accent: #1f160f;
-
-    --color-focus: #8cc4f2;
-
-    --color-status-clean: #6cc59a;
-    --color-status-clean-soft: #17291f;
-    --color-status-shaky: #d9c25a;
-    --color-status-shaky-soft: #2c2610;
-    --color-status-lost: #f08a70;
-    --color-status-lost-soft: #33191a;
-
-    --role-root-ink: #e2701f;
-    --role-chord-ink: #56b4e9;
-    --role-scale-ink: #1fb38a;
-    --role-melody-ink: #e69f00;
-    --role-thumb-ink: #cc79a7;
-    --role-muted-ink: #b9aa97;
-
-    --fb-shadow: 0 0 0 1px rgb(0 0 0 / 0.6), 0 10px 28px rgb(0 0 0 / 0.5);
-
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
-    --shadow-3: 0 12px 32px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
-  }
-}
-
-/* ── Dark: forced (keep identical to the block above) ───────────────────── */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
-  --color-surface: #1a1411;
-  --color-surface-sunken: #120e0c;
-  --color-surface-raised: #241c17;
-  --color-ink: #eee5d6;
-  --color-ink-muted: #b9aa97;
-  --color-ink-subtle: #8d7e6e;
-  --color-border: #3a2f27;
-  --color-border-strong: #7d6d5e;
-  --color-scrim: rgb(0 0 0 / 0.6);
-  --color-selection: #3b2a12;
-
-  --color-accent: #e69f00;
-  --color-accent-strong: #f2b44c;
-  --color-accent-soft: #3b2a12;
-  --color-on-accent: #1f160f;
-
-  --color-focus: #8cc4f2;
-
-  --color-status-clean: #6cc59a;
-  --color-status-clean-soft: #17291f;
-  --color-status-shaky: #d9c25a;
-  --color-status-shaky-soft: #2c2610;
-  --color-status-lost: #f08a70;
-  --color-status-lost-soft: #33191a;
-
-  --role-root-ink: #e2701f;
-  --role-chord-ink: #56b4e9;
-  --role-scale-ink: #1fb38a;
-  --role-melody-ink: #e69f00;
-  --role-thumb-ink: #cc79a7;
-  --role-muted-ink: #b9aa97;
-
-  --fb-shadow: 0 0 0 1px rgb(0 0 0 / 0.6), 0 10px 28px rgb(0 0 0 / 0.5);
-
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
-  --shadow-3: 0 12px 32px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
-}
-
-/* ── Compact screens (phones, < 600px) ──────────────────────────────────── */
-@media (max-width: 599px) {
+/* ── Compact screens (phones, < 37.5em: scales with the text size) ──────── */
+@media (max-width: 37.49em) {
   :root {
     --layout-gutter: var(--space-4);
     --header-height: 2.75rem;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChordShape } from '../../domain/types.ts'
-import { chordAriaLabel, chordLayout, chordStringX, chordWindow, spokenChord } from './chordLayout.ts'
+import { chordAriaLabel, chordLayout, chordStringX, chordWindow, positionLabelWidth, spokenChord } from './chordLayout.ts'
 
 const G: ChordShape = { id: 'open-g:G', tuning: 'open-g', symbol: 'G', frets: [0, 0, 0, 0, 0] }
 const C: ChordShape = {
@@ -89,6 +89,31 @@ describe('layout', () => {
     const L = chordLayout(fifthFretted)
     expect(L.fifth).toEqual({ x: 16, top: 24 + 5 * 26, bottom: 24 + 7 * 26 })
     expect(L.dots.find((d) => d.string === 5)?.y).toBe(24 + 6 * 26 + 13)
+  })
+
+  it('keeps a two-digit position label clear of a string-4 dot', () => {
+    const high: ChordShape = { id: 'open-g:G-12', tuning: 'open-g', symbol: 'G', frets: [12, 12, 12, 12, 0] }
+    const L = chordLayout(high)
+    expect(L.positionLabel?.text).toBe('12fr')
+    const p = L.positionLabel!
+    expect(p.anchor).toBe('end')
+    // Dot radius 9 plus half the 1.5 outline, and a little air.
+    expect(p.x).toBeLessThanOrEqual(chordStringX(4) - 9 - 0.75 - 1)
+    expect(p.x - positionLabelWidth(12)).toBeGreaterThanOrEqual(0)
+  })
+
+  it('puts the position label above a 5th-string column that fills the margin', () => {
+    const L = chordLayout({ id: 'x', tuning: 'open-g', symbol: 'D', frets: [12, 11, 12, 12, 12] })
+    expect(L.fifth?.top).toBe(L.gridTop)
+    expect(L.positionLabel).toMatchObject({ anchor: 'start', y: 16 })
+    expect(L.positionLabel!.y).toBeLessThan(L.gridTop)
+  })
+
+  it('pads rows to a shared count, up to the cap', () => {
+    expect(chordLayout(C, true, undefined, 5).rows).toBe(5)
+    expect(chordLayout(C, true, undefined, 5).intervalY).toBe(24 + 5 * 26 + 18)
+    expect(chordLayout(fifthFretted, false, undefined, 4).rows).toBe(7)
+    expect(chordLayout(C, false, undefined, 12).rows).toBe(7)
   })
 
   it('adds an interval row only when asked', () => {

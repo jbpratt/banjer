@@ -27,6 +27,16 @@ export interface FretMarker {
   state?: MarkerState
   /** Left-hand finger to show with the marker. */
   finger?: Finger
+  /**
+   * The note as a screen reader should say it, spelled for the key: "B flat", "F sharp".
+   * Without it the board spells from the label when that is a note name, else with sharps.
+   */
+  spoken?: string
+  /**
+   * What this marker's state means here, read after the note: "selected shape", "other
+   * position", "moved from here". Defaults: active "sounding", next "upcoming", dim "context".
+   */
+  stateText?: string
 }
 
 export interface FretboardProps {
@@ -39,6 +49,13 @@ export interface FretboardProps {
   leftHanded?: boolean
   /** Label open strings with note names at the nut. Default true. */
   showOpenNames?: boolean
+  /**
+   * Absolute neck fret to bring into view when the board is too wide for its container and
+   * scrolls (phones), e.g. the selected shape's position. Without it the board centres on
+   * active markers, or on the un-dimmed ones when the rest are dimmed and they sit within a
+   * few frets; otherwise it starts at the nut.
+   */
+  focusFret?: number
   /** Called when a position is clicked or tapped, e.g. to audition the note. */
   onSelect?: (pos: Position) => void
   /** Accessible description of what is shown, e.g. "G major scale, frets 0 to 7". */
@@ -60,5 +77,10 @@ export interface ChordDiagramProps {
   intervalLabels?: readonly (string | null)[]
   /** Strings whose note to call out (e.g. the notes that moved from the major shape). */
   highlight?: readonly StringNum[]
+  /**
+   * Fret rows to draw, at least the shape's own. Pass the max over a set of diagrams shown
+   * side by side so their boxes and label rows line up.
+   */
+  rows?: number
   className?: string
 }

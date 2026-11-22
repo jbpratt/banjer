@@ -15,6 +15,13 @@ export const CHORD_ROW = 26
 export const CHORD_INDICATOR_Y = 12
 export const CHORD_FIFTH_X = 16
 const MAX_ROWS = 7
+/** Position label sizes (user units): the fret number, and the smaller "fr" after it. */
+export const CHORD_POSITION_FONT = 12
+export const CHORD_POSITION_SUFFIX_FONT = 9
+/** Generous width estimate for a position label: digits ≈ 0.62em, "fr" ≈ 0.9em of the suffix font. */
+export function positionLabelWidth(fret: number): number {
+  return String(fret).length * 0.62 * CHORD_POSITION_FONT + 0.9 * CHORD_POSITION_SUFFIX_FONT
+}
 
 export function chordStringX(string: StringNum): number {
   return string === 5 ? CHORD_FIFTH_X : 38 + (4 - string) * 22
@@ -54,8 +61,8 @@ export interface ChordLayout {
   hasNut: boolean
   gridTop: number
   gridBottom: number
-  /** "5fr" when the window starts above the nut. */
-  positionLabel?: { text: string; x: number; y: number }
+  /** "5fr" when the window starts above the nut; `anchor` is the SVG text-anchor at x. */
+  positionLabel?: { text: string; fret: number; x: number; y: number; anchor: 'start' | 'end' }
   /** Short 5th-string column, only when the shape frets the 5th string. */
   fifth: { x: number; top: number; bottom: number } | null
   dots: ChordDot[]
@@ -81,8 +88,18 @@ export function chordWindow(shape: ChordShape): [number, number] {
   return [start, Math.min(MAX_ROWS, Math.max(4, max - start + 1))]
 }
 
-export function chordLayout(shape: ChordShape, withIntervals = false, labels?: readonly (string | null)[]): ChordLayout {
-  const [start, rows] = chordWindow(shape)
+/**
+ * `minRows` pads the window (up to the 7-row cap) so diagrams shown side by side share a
+ * box height and their interval rows line up.
+ */
+export function chordLayout(
+  shape: ChordShape,
+  withIntervals = false,
+  labels?: readonly (string | null)[],
+  minRows?: number,
+): ChordLayout {
+  const [start, ownRows] = chordWindow(shape)
+  const rows = minRows === undefined ? ownRows : Math.max(ownRows, Math.min(MAX_ROWS, Math.round(minRows)))
   const hasNut = start === 1
   const gridTop = CHORD_GRID_TOP
   const gridBottom = gridTop + rows * CHORD_ROW
@@ -145,11 +162,13 @@ export function chordLayout(shape: ChordShape, withIntervals = false, labels?: r
     }
   }
 
+  // Beside the first row, ending clear of a string-4 dot (r 9 + outline); above the 5th-string
+  // column when that column fills the left margin.
   const positionLabel = hasNut
     ? undefined
     : fifth && fifth.top <= gridTop
-      ? { text: `${start}fr`, x: CHORD_FIFTH_X - 6, y: CHORD_INDICATOR_Y + 4 }
-      : { text: `${start}fr`, x: 28, y: gridTop + CHORD_ROW / 2 + 5 }
+      ? { text: `${start}fr`, fret: start, x: 2, y: CHORD_INDICATOR_Y + 4, anchor: 'start' as const }
+      : { text: `${start}fr`, fret: start, x: chordStringX(4) - 12, y: gridTop + CHORD_ROW / 2 + 4, anchor: 'end' as const }
 
   const intervals: { x: number; label: string }[] = []
   if (withIntervals && (rootPc !== null || labels)) {

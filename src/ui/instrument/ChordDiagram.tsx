@@ -11,9 +11,10 @@ export function ChordDiagram({
   showFingers = true,
   intervalLabels,
   highlight,
+  rows,
   className,
 }: ChordDiagramProps) {
-  const L = useMemo(() => chordLayout(shape, size === 'lg', intervalLabels), [shape, size, intervalLabels])
+  const L = useMemo(() => chordLayout(shape, size === 'lg', intervalLabels, rows), [shape, size, intervalLabels, rows])
   const lit = (s: number) => highlight?.includes(s as 1 | 2 | 3 | 4 | 5) ?? false
   const ghost = emphasis === 'next'
   const stringsShown = [4, 3, 2, 1] as const
@@ -46,8 +47,9 @@ export function ChordDiagram({
         )}
         {L.hasNut && <rect className={styles.nut} x={chordStringX(4) - 0.75} y={L.gridTop - 2.5} width={chordStringX(1) - chordStringX(4) + 1.5} height={5} />}
         {L.positionLabel && (
-          <text className={styles.position} x={L.positionLabel.x} y={L.positionLabel.y} textAnchor="end">
-            {L.positionLabel.text}
+          <text className={styles.position} x={L.positionLabel.x} y={L.positionLabel.y} textAnchor={L.positionLabel.anchor}>
+            {L.positionLabel.fret}
+            <tspan className={styles.positionSuffix}>fr</tspan>
           </text>
         )}
 
@@ -59,10 +61,15 @@ export function ChordDiagram({
               className={styles.mutedInd}
               d={`M${ind.x - 5} ${CHORD_INDICATOR_Y - 5} L${ind.x + 5} ${CHORD_INDICATOR_Y + 5} M${ind.x + 5} ${CHORD_INDICATOR_Y - 5} L${ind.x - 5} ${CHORD_INDICATOR_Y + 5}`}
             />
-          ) : ind.kind === 'open-root' ? (
-            <rect key={ind.string} className={[styles.openRoot, lit(ind.string) && styles.litOpen].filter(Boolean).join(' ')} x={ind.x - 5.5} y={CHORD_INDICATOR_Y - 5.5} width={11} height={11} rx={2} />
           ) : (
-            <circle key={ind.string} className={[styles.openChord, lit(ind.string) && styles.litOpen].filter(Boolean).join(' ')} cx={ind.x} cy={CHORD_INDICATOR_Y} r={6} />
+            <g key={ind.string}>
+              {lit(ind.string) && <circle className={styles.litRing} cx={ind.x} cy={CHORD_INDICATOR_Y} r={10} />}
+              {ind.kind === 'open-root' ? (
+                <rect className={[styles.openRoot, lit(ind.string) && styles.litOpen].filter(Boolean).join(' ')} x={ind.x - 5.5} y={CHORD_INDICATOR_Y - 5.5} width={11} height={11} rx={2} />
+              ) : (
+                <circle className={[styles.openChord, lit(ind.string) && styles.litOpen].filter(Boolean).join(' ')} cx={ind.x} cy={CHORD_INDICATOR_Y} r={6} />
+              )}
+            </g>
           ),
         )}
 
@@ -84,6 +91,8 @@ export function ChordDiagram({
             key={dot.string}
             className={[dot.role === 'root' ? styles.dotRoot : styles.dotChord, lit(dot.string) && styles.lit].filter(Boolean).join(' ')}
           >
+            {/* Moved notes get a dashed outer ring too, so the cue is not colour alone. */}
+            {lit(dot.string) && <circle className={styles.litRing} cx={dot.x} cy={dot.y} r={12} />}
             {dot.role === 'root' ? (
               <rect className={styles.dot} x={dot.x - 8} y={dot.y - 8} width={16} height={16} rx={2.5} />
             ) : (
