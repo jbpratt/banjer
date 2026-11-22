@@ -8,16 +8,20 @@ export function getEngine(): AudioEngine {
   return (engine ??= createAudioEngine())
 }
 
-/** Unlock audio on the first pointer or key gesture. */
+/** Unlock audio on the first pointer or key gesture. Returns a remover for the listeners. */
 export function installUnlock(): () => void {
-  const unlock = () => {
-    void getEngine().unlock().catch(() => {})
+  const remove = () => {
     window.removeEventListener('pointerdown', unlock, true)
     window.removeEventListener('keydown', unlock, true)
   }
+  const unlock = () => {
+    remove()
+    void getEngine().unlock().catch(() => {})
+  }
   window.addEventListener('pointerdown', unlock, true)
   window.addEventListener('keydown', unlock, true)
-  return unlock
+  // Removing must not unlock: StrictMode runs this cleanup at mount, with no gesture.
+  return remove
 }
 
 if (import.meta.hot) {
