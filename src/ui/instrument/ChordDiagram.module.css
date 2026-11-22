@@ -1,0 +1,132 @@
+/* Chord box (design.md §6). Drawn on a page surface: inks for lines, fills + outline for dots. */
+
+.figure {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.sm { width: 72px; }
+.md { width: 112px; }
+.lg { width: 200px; }
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: var(--leading-tight);
+}
+
+.name {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-bold);
+  text-underline-offset: 0.18em;
+}
+
+.sm .name { font-size: var(--font-size-md); }
+.md .name { font-size: var(--font-size-xl); }
+.lg .name { font-size: var(--font-size-2xl); }
+
+.eyebrow {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.current .name {
+  color: var(--color-accent-strong);
+  text-decoration: underline 2px var(--color-accent-strong);
+}
+
+.next .name {
+  color: var(--color-ink-muted);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.line {
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5px;
+}
+
+.nut { fill: var(--color-ink); }
+
+.pip {
+  fill: var(--color-border-strong);
+}
+
+.position {
+  fill: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.openRoot,
+.openChord,
+.mutedInd {
+  fill: none;
+  stroke-width: 2px;
+}
+
+.openRoot { stroke: var(--role-root-ink); }
+.openChord { stroke: var(--role-chord-ink); }
+
+.mutedInd {
+  stroke: var(--role-muted-ink);
+  stroke-linecap: round;
+}
+
+.dot {
+  stroke: var(--marker-outline);
+  stroke-width: var(--marker-outline-width);
+}
+
+.dotRoot .dot { fill: var(--role-root); }
+.dotChord .dot { fill: var(--role-chord); }
+
+.finger {
+  fill: var(--role-on);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+/* next: dashed hollow ghosts in role inks */
+.next .dot {
+  fill: var(--color-surface);
+  stroke-width: 2px;
+  stroke-dasharray: 4 3;
+}
+
+.next .dotRoot .dot { fill: var(--color-surface); stroke: var(--role-root-ink); }
+.next .dotChord .dot { fill: var(--color-surface); stroke: var(--role-chord-ink); }
+.next .finger { fill: var(--color-ink-muted); }
+
+.interval {
+  fill: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: 9px; /* ≈14 CSS px at the lg width */
+}
+
+/* highlight: an accent halo, e.g. the note that moved from the major shape */
+.lit .dot {
+  stroke: var(--color-accent-strong);
+  stroke-width: 3px;
+  paint-order: stroke;
+}
+
+.litOpen {
+  stroke: var(--color-accent-strong);
+  stroke-width: 3px;
+}

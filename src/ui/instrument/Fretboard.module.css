@@ -1,0 +1,113 @@
+/* Fretboard (design.md §4). Materials are theme-independent; text is on the page. */
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  min-width: 0;
+}
+
+.legend {
+  align-self: flex-end;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.edge { fill: var(--fb-wood-edge); }
+
+.binding line {
+  stroke: var(--fb-binding);
+  stroke-width: var(--fb-binding-width);
+}
+
+.inlay { fill: var(--fb-inlay); }
+.fret { fill: var(--fb-fret); }
+.fretHi { fill: var(--fb-fret-highlight); }
+.nut { fill: var(--fb-nut); }
+
+.peg {
+  fill: var(--fb-peg);
+  stroke: var(--fb-peg-edge);
+  stroke-width: 1.5px;
+}
+
+.string,
+.string line {
+  stroke: var(--fb-string);
+  stroke-linecap: butt;
+}
+
+.wound line { stroke: var(--fb-string-wound); }
+.mutedString { opacity: 0.35; }
+
+.shade { fill: var(--fb-shade); }
+
+.capo {
+  fill: var(--fb-capo);
+  stroke: var(--fb-capo-edge);
+  stroke-width: 2px;
+}
+
+.spike {
+  fill: var(--fb-spike);
+  stroke: var(--fb-marker-outline);
+  stroke-width: 1px;
+}
+
+.spikeStem {
+  stroke: var(--fb-spike);
+  stroke-width: 1.5px;
+}
+
+.openName {
+  fill: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ruler {
+  fill: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Explorer hit targets */
+.target {
+  cursor: pointer;
+  outline: none;
+}
+
+.target:focus,
+.target:focus-visible {
+  outline: none;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.target:hover .hit {
+  fill: rgb(255 244 220 / 0.06);
+}
+
+.cursor {
+  fill: none;
+  stroke: var(--fb-focus);
+  stroke-width: 3px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.target:focus-visible .cursor {
+  opacity: 1;
+}

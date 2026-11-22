@@ -1,0 +1,220 @@
+/*
+ * Banjer global styles: reset, base typography, focus, reduced motion.
+ * Uses tokens from tokens.css (imported separately by the app; not imported here).
+ */
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+ul[role="list"],
+ol[role="list"] {
+  list-style: none;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--leading-normal);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--font-size-2xl);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--color-accent-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+strong,
+b {
+  font-weight: var(--font-weight-semibold);
+}
+
+small {
+  font-size: var(--font-size-sm);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8em;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
+  text-align: center;
+  white-space: nowrap;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+svg text {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background-color: var(--color-selection);
+  color: var(--color-ink);
+}
+
+/* ── Focus ──────────────────────────────────────────────────────────────── */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Containers focused programmatically (e.g. <main tabindex="-1">) get no ring. */
+:where(main, section, article, [role="region"], [role="dialog"])[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Utilities ──────────────────────────────────────────────────────────── */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

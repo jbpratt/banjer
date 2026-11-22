@@ -1,0 +1,99 @@
+/* Fretboard markers (design.md §5). Always on wood, so fills are theme-independent. */
+
+.marker {
+  --m-fill: var(--role-chord);
+}
+
+.root { --m-fill: var(--role-root); }
+.chord { --m-fill: var(--role-chord); }
+.scale { --m-fill: var(--role-scale); }
+.melody { --m-fill: var(--role-melody); }
+.thumb { --m-fill: var(--role-thumb); }
+.muted { --m-fill: var(--role-muted); }
+
+.shape {
+  fill: var(--m-fill);
+  stroke: var(--fb-marker-outline);
+  stroke-width: var(--fb-marker-outline-width);
+  stroke-linejoin: round;
+}
+
+.label {
+  fill: var(--role-on);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Scale: hollow ring on a wood mask. */
+.scale .shape {
+  fill: var(--fb-wood);
+  stroke: var(--role-scale);
+}
+
+.scale .label {
+  fill: var(--fb-ghost-ink);
+}
+
+/* Muted: × with a dark back-stroke. */
+.cross,
+.crossBack {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.cross { stroke: var(--role-muted); }
+.crossBack { stroke: var(--fb-marker-outline); }
+
+/* active: larger, haloed; a scale ring fills solid. */
+.active .body {
+  transform: scale(var(--marker-active-scale));
+}
+
+.active .label { font-weight: var(--font-weight-bold); }
+
+.active.scale .shape { fill: var(--role-scale); }
+.active.scale .label { fill: var(--role-on); }
+
+.halo {
+  fill: none;
+  stroke: var(--fb-halo);
+  stroke-width: var(--fb-halo-width);
+}
+
+/* next: dashed ghost, never filled. */
+.ghost .shape {
+  fill: var(--fb-wood);
+  stroke: var(--m-fill);
+  stroke-width: 2.5px;
+  stroke-dasharray: var(--marker-ghost-dash);
+}
+
+.ghost .label {
+  fill: var(--fb-ghost-ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ghost .cross { stroke-dasharray: 3 3; }
+
+/* dim: context. */
+.dim {
+  opacity: var(--marker-dim-opacity);
+}
+
+.dim .body {
+  transform: scale(var(--marker-dim-scale));
+}
+
+.badge {
+  fill: var(--fb-badge);
+  stroke: var(--fb-marker-outline);
+  stroke-width: 1px;
+}
+
+.badgeText {
+  fill: var(--fb-badge-ink);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-bold);
+}
