@@ -4,7 +4,7 @@ import { formatRoute, parseRoute } from './routes.ts'
 import type { Route } from './routes.ts'
 import { DEFAULT_SETTINGS, parseSettings } from './settings.ts'
 import type { Setup } from '../domain/types.ts'
-import { isClose, majorKey } from '../theory/index.ts'
+import { CHORD_QUALITIES, LAB_QUALITIES, isClose, majorKey } from '../theory/index.ts'
 import {
   cardFocus,
   cardName,
@@ -21,9 +21,14 @@ import {
   labMarkers,
   labRoot,
   moveText,
+  QUALITY_GROUPS,
+  QUALITY_NAMES,
+  qualityGroups,
   resolveChord,
   resolveKey,
-  rootOptions,
+  chordRing,
+  keyRing,
+  scaleRing,
   spellingText,
 } from './views/explore/lab.ts'
 
@@ -157,16 +162,45 @@ describe('lab cards', () => {
   })
 })
 
-describe('routes and settings', () => {
-  it('keeps an enharmonic route spelling in the root options', () => {
-    expect(rootOptions('G')).toHaveLength(12)
-    const cs = rootOptions('C#')
-    expect(cs.slice(0, 3)).toEqual(['C', 'C#', 'Db'])
-    const gb = rootOptions('Gb')
-    expect(gb.slice(gb.indexOf('F#'), gb.indexOf('F#') + 3)).toEqual(['F#', 'Gb', 'G'])
-    const es = rootOptions('E#')
-    expect(es.slice(es.indexOf('E'), es.indexOf('E') + 3)).toEqual(['E', 'E#', 'F'])
+describe('pitch rings', () => {
+  it('numbers the key and joins a focused chord in stacking order', () => {
+    const g = majorKey('G')
+    const plain = keyRing(g, null)
+    expect(plain.label).toBe('G major: G A B C D E F♯')
+    expect(plain.notes.map((n) => [n.semis, n.name, n.label, n.role])).toEqual([
+      [0, 'G', '1', 'root'],
+      [2, 'A', '2', 'scale'],
+      [4, 'B', '3', 'scale'],
+      [5, 'C', '4', 'scale'],
+      [7, 'D', '5', 'scale'],
+      [9, 'E', '6', 'scale'],
+      [11, 'F♯', '7', 'scale'],
+    ])
+    expect(plain.chord).toBeUndefined()
+    const d7 = keyRing(g, { chord: g.chords[4]!, seventh: true })
+    expect(d7.chord).toEqual([7, 11, 2, 5])
+    expect(d7.title).toBe('D7')
+    expect(d7.subtitle).toBe('V7 in G')
+    expect(d7.notes.filter((n) => n.role !== 'scale').map((n) => `${n.name}:${n.role}`)).toEqual(['A:chord', 'C:chord', 'D:root', 'F♯:chord'])
+    expect(d7.label).toBe('G major: G A B C D E F♯; D7 highlighted: D F♯ A C, degrees 5 7 2 4')
+    // The relative minor's chord wraps past the octave: Em = E G B.
+    expect(keyRing(g, { chord: g.chords[5]!, seventh: false }).chord).toEqual([9, 0, 4])
   })
+
+  it('spells scales by letter and chords from their root', () => {
+    const f = scaleRing('F', 'mixolydian')
+    expect(f.label).toBe('F mixolydian: F G A B♭ C D E♭')
+    expect(f.notes.at(-1)).toMatchObject({ semis: 10, name: 'E♭', label: '♭7' })
+    expect(f.notes[0]!.label).toBe('R')
+    const gm7 = chordRing('G', 'm7')
+    expect(gm7.label).toBe('Gm7: G B♭ D F')
+    expect(gm7.chord).toEqual([0, 3, 7, 10])
+    expect(gm7.notes.map((n) => n.label)).toEqual(['R', '♭3', '5', '♭7'])
+    expect(chordRing('B', 'dim7').notes.map((n) => n.name)).toEqual(['B', 'D', 'F', 'A♭'])
+  })
+})
+
+describe('routes and settings', () => {
   it('resolves chord and key subjects, falling back to G', () => {
     expect(resolveChord(undefined)).toEqual({ value: { root: 'G', quality: '' }, unknown: null, replace: null })
     expect(resolveChord('G#m7')).toEqual({ value: { root: 'G#', quality: 'm7' }, unknown: null, replace: null })
@@ -213,5 +247,23 @@ describe('routes and settings', () => {
       volume: 1,
       leftHanded: true,
     })
+  })
+})
+
+describe('quality chips', () => {
+  it('groups every chord quality exactly once, each with a chip name', () => {
+    const grouped = QUALITY_GROUPS.flatMap((g) => g.qualities)
+    expect([...grouped].sort()).toEqual(Object.keys(CHORD_QUALITIES).sort())
+    for (const q of grouped) expect(QUALITY_NAMES[q], q).toBeTruthy()
+  })
+
+  it('narrows to the lab qualities without losing or reordering any', () => {
+    const lab = qualityGroups(LAB_QUALITIES).flatMap((g) => g.qualities)
+    expect([...lab].sort()).toEqual([...LAB_QUALITIES].sort())
+    expect(qualityGroups(LAB_QUALITIES).map((g) => g.label)).toEqual(['Triads', '7ths', 'Other'])
+    expect(qualityGroups(['m', '7'])).toEqual([
+      { label: 'Triads', qualities: ['m'] },
+      { label: '7ths', qualities: ['7'] },
+    ])
   })
 })

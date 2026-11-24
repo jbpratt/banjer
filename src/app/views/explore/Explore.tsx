@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { TuningId } from '../../../domain/types.ts'
 import { TUNINGS, parseChord } from '../../../theory/index.ts'
+import { Segmented } from '../../../ui/controls/Segmented.tsx'
 import type { Content } from '../../content.ts'
 import { formatRoute } from '../../routes.ts'
 import type { ExploreMode, Route } from '../../routes.ts'
@@ -19,6 +20,11 @@ const TABS: { mode: ExploreMode; label: string }[] = [
   { mode: 'keys', label: 'Keys' },
   { mode: 'scales', label: 'Scales & tones' },
 ]
+
+const LABEL_OPTIONS = [
+  { value: 'degree', label: 'Degrees' },
+  { value: 'note', label: 'Notes' },
+] as const
 
 interface Props {
   content: Content
@@ -95,15 +101,7 @@ export function Explore({ content, settings, route, onRoute }: Props) {
           ))}
         </select>
       </label>
-      <fieldset className={styles.segmented}>
-        <legend>Labels</legend>
-        {(['degree', 'note'] as const).map((k) => (
-          <label key={k} className={styles.segment}>
-            <input type="radio" name="explore-labels" checked={labels === k} onChange={() => setLabels(k)} />
-            <span>{k === 'degree' ? 'Degrees' : 'Notes'}</span>
-          </label>
-        ))}
-      </fieldset>
+      <Segmented legend="Labels" options={LABEL_OPTIONS} value={labels} onChange={setLabels} />
     </>
   )
 

@@ -1,0 +1,160 @@
+/* Root picker: twelve native radios laid out as a keyboard (naturals below, sharps/flats
+   raised between them). Tokens from src/styles/tokens.css. */
+
+.picker {
+  container: root-picker / inline-size;
+  width: min(100%, 21rem);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 14 half-columns: each natural spans two, each sharp/flat straddles the line between two. */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: var(--space-1) 3px;
+}
+
+.natural,
+.accidental {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: var(--hit-target);
+  grid-column-end: span 2;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.natural {
+  grid-row: 2;
+  background: var(--color-surface-raised);
+  font-size: var(--font-size-lg);
+}
+
+.accidental {
+  grid-row: 1;
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-sm);
+}
+
+[data-pc='0'] { grid-column-start: 1; }
+[data-pc='1'] { grid-column-start: 2; }
+[data-pc='2'] { grid-column-start: 3; }
+[data-pc='3'] { grid-column-start: 4; }
+[data-pc='4'] { grid-column-start: 5; }
+[data-pc='5'] { grid-column-start: 7; }
+[data-pc='6'] { grid-column-start: 8; }
+[data-pc='7'] { grid-column-start: 9; }
+[data-pc='8'] { grid-column-start: 10; }
+[data-pc='9'] { grid-column-start: 11; }
+[data-pc='10'] { grid-column-start: 12; }
+[data-pc='11'] { grid-column-start: 13; }
+
+/* The radio covers its key, so the whole key is the target and keeps native behaviour. */
+.natural input,
+.accidental input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 2px;
+  line-height: var(--leading-tight);
+  text-align: center;
+}
+
+.primary {
+  font-weight: var(--font-weight-bold);
+}
+
+.also {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+}
+
+.natural:hover,
+.accidental:hover {
+  border-color: var(--color-ink);
+}
+
+.natural:has(input:checked),
+.accidental:has(input:checked) {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: inset 0 -3px 0 var(--color-on-accent);
+}
+
+:has(input:checked) > .face .also {
+  color: var(--color-on-accent);
+}
+
+.natural:has(input:focus-visible),
+.accidental:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  z-index: 1;
+}
+
+.respell {
+  min-height: 2.25rem;
+  margin-top: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (pointer: coarse) {
+  .respell {
+    min-height: var(--hit-target);
+  }
+}
+
+/* Too narrow for 7 keys across (a phone at large text sizes): a plain chromatic grid. */
+@container root-picker (width < 15rem) {
+  .keys {
+    grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+  }
+
+  .natural,
+  .accidental {
+    grid-row: auto;
+    grid-column: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .natural:has(input:checked),
+  .accidental:has(input:checked) {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  :has(input:checked) > .face .also {
+    color: HighlightText;
+  }
+}

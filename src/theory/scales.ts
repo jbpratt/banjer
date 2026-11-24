@@ -33,6 +33,14 @@ export function scaleNotes(root: SpelledNote, scale: ScaleId): SpelledNote[] {
   return SCALES[scale].degrees.map((d) => spellDegree(root, d))
 }
 
+/**
+ * Semitones from each pitch class to the next, wrapping back to the first an octave up:
+ * the major scale's [2, 2, 1, 2, 2, 2, 1] (W W H W W W H). Input in scale order.
+ */
+export function stepSizes(pcs: readonly PitchClass[]): number[] {
+  return pcs.map((pc, i) => pitchClass(pcs[(i + 1) % pcs.length]! - pc) || 12)
+}
+
 /** Degree of `pc` in the scale ('b3', '5'), or null if it isn't a scale note. */
 export function scaleDegree(root: SpelledNote, scale: ScaleId, pc: PitchClass): string | null {
   const def = SCALES[scale]

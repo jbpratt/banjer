@@ -1,9 +1,10 @@
 /** Pure helpers for the Explore chord lab and key view. */
-import type { ChordShape, Position, Setup, StringNum } from '../../../domain/types.ts'
+import type { ChordShape, Position, ScaleId, Setup, StringNum } from '../../../domain/types.ts'
 import {
   CHORD_FORMULAS,
   chordDegree,
   chordNotes,
+  degreeSemitones,
   deriveWithReason,
   droneDegree,
   hasDoubleAccidental,
@@ -15,13 +16,15 @@ import {
   pcOf,
   pitchClass,
   prettyNote,
+  SCALES,
+  scaleNotes,
   scalePositions,
   simplestRoot,
   soundingMidi,
   spellInChord,
 } from '../../../theory/index.ts'
 import type { DerivedVoicing, DiatonicChord, Frets4, KeyInfo, Move, SpelledNote, TriadForm, Unreachable } from '../../../theory/index.ts'
-import type { FretMarker } from '../../../ui/instrument/types.ts'
+import type { FretMarker, PitchRingProps } from '../../../ui/instrument/types.ts'
 import { spokenNote } from '../../markers.ts'
 import type { ExploreMode } from '../../routes.ts'
 
@@ -231,19 +234,74 @@ export function keyChordText(info: KeyInfo, c: DiatonicChord, seventh: boolean):
   return `${chordTitle(c.root, seventh ? c.seventh : c.triad)} = ${notes} — degrees ${steps.map((i) => i + 1).join(' ')} of ${prettyNote(info.key)}`
 }
 
-export const LAB_ROOTS: readonly SpelledNote[] = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+const KEY_SEMIS = [0, 2, 4, 5, 7, 9, 11] as const
+
+/** A key chip's chord, for the ring: which chord and whether it's the 7th. */
+export interface KeyFocus {
+  chord: DiatonicChord
+  seventh: boolean
+}
 
 /**
- * Root/key select options: the usual twelve, plus `current` beside its enharmonic twin when
- * the route spells it another way (C♯ next to D♭, E♯ next to F), so the select shows it.
+ * The key's ring: its seven notes numbered 1–7 with the steps between them, and the focused
+ * chord's tones (if any) joined in stacking order, so stacked 3rds show as every other note.
  */
-export function rootOptions(current: SpelledNote): SpelledNote[] {
-  if (LAB_ROOTS.includes(current)) return [...LAB_ROOTS]
-  const out = [...LAB_ROOTS]
-  const twin = out.findIndex((r) => pcOf(r) === pcOf(current))
-  // Sharps and naturals read before their flat twin, flats after.
-  out.splice(twin + (current.includes('b') ? 1 : 0), 0, current)
-  return out
+export function keyRing(info: KeyInfo, focus: KeyFocus | null): PitchRingProps {
+  const key = prettyNote(info.key)
+  const scale = `${key} major: ${info.notes.map(prettyNote).join(' ')}`
+  if (!focus) {
+    return {
+      notes: info.notes.map((n, i) => ({ semis: KEY_SEMIS[i]!, name: prettyNote(n), label: String(i + 1), role: i === 0 ? 'root' : 'scale' })),
+      steps: true,
+      title: key,
+      subtitle: 'major',
+      label: scale,
+    }
+  }
+  const { chord: c, seventh } = focus
+  const steps = (seventh ? [0, 2, 4, 6] : [0, 2, 4]).map((k) => (c.degree - 1 + k) % 7)
+  const title = chordTitle(c.root, seventh ? c.seventh : c.triad)
+  return {
+    notes: info.notes.map((n, i) => ({
+      semis: KEY_SEMIS[i]!,
+      name: prettyNote(n),
+      label: String(i + 1),
+      role: i === steps[0] ? 'root' : steps.includes(i) ? 'chord' : 'scale',
+    })),
+    steps: true,
+    chord: steps.map((i) => KEY_SEMIS[i]!),
+    title,
+    subtitle: `${seventh ? c.numeral7 : c.numeral} in ${key}`,
+    label: `${scale}; ${title} highlighted: ${steps.map((i) => prettyNote(info.notes[i]!)).join(' ')}, degrees ${steps.map((i) => i + 1).join(' ')}`,
+  }
+}
+
+/** Any scale's ring: notes by degree (R ♭3 4 5 ♭7, as on the board) with the steps between them. */
+export function scaleRing(root: SpelledNote, scale: ScaleId): PitchRingProps {
+  const def = SCALES[scale]
+  const notes = scaleNotes(root, scale)
+  return {
+    notes: def.degrees.map((d, i) => ({ semis: def.intervals[i]!, name: prettyNote(notes[i]!), label: degreeText(d), role: i === 0 ? 'root' : 'scale' })),
+    steps: true,
+    title: prettyNote(root),
+    subtitle: def.name.toLowerCase(),
+    label: `${prettyNote(root)} ${def.name.toLowerCase()}: ${notes.map(prettyNote).join(' ')}`,
+  }
+}
+
+/** A chord's ring: its tones by degree from its root at the top, joined in stacking order. */
+export function chordRing(root: SpelledNote, quality: string): PitchRingProps {
+  const degrees = CHORD_FORMULAS[quality] ?? []
+  const notes = chordNotes(root, quality)
+  const semis = degrees.map((d) => pitchClass(degreeSemitones(d) ?? 0))
+  return {
+    notes: degrees
+      .map((d, i) => ({ semis: semis[i]!, name: prettyNote(notes[i]!), label: degreeText(d), role: i === 0 ? ('root' as const) : ('chord' as const) }))
+      .sort((a, b) => a.semis - b.semis),
+    chord: semis,
+    title: chordTitle(root, quality),
+    label: spellingText(root, quality).replace(' =', ':'),
+  }
 }
 
 export interface Resolved<T> {
@@ -296,4 +354,23 @@ export const QUALITY_NAMES: Readonly<Record<string, string>> = {
   aug: 'aug',
   m7b5: 'm7♭5',
   dim7: 'dim7',
+  add9: 'add9',
+  '5': '5',
+}
+
+/**
+ * Chord qualities in the order the quality chips show them: triads, then 7ths, then the
+ * rest. Every quality in CHORD_QUALITIES sits in exactly one group (tested).
+ */
+export const QUALITY_GROUPS: readonly { label: string; qualities: readonly string[] }[] = [
+  { label: 'Triads', qualities: ['', 'm', 'dim', 'aug'] },
+  { label: '7ths', qualities: ['7', 'maj7', 'm7', 'm7b5', 'dim7'] },
+  { label: 'Other', qualities: ['6', 'm6', 'sus2', 'sus4', '7sus4', 'add9', '5'] },
+]
+
+/** QUALITY_GROUPS narrowed to the qualities offered here (the lab derives fewer than exist). */
+export function qualityGroups(offered: readonly string[]): { label: string; qualities: string[] }[] {
+  return QUALITY_GROUPS.map((g) => ({ label: g.label, qualities: g.qualities.filter((q) => offered.includes(q)) })).filter(
+    (g) => g.qualities.length > 0,
+  )
 }

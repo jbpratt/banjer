@@ -71,90 +71,30 @@
   }
 }
 
-/* ── Segmented radio ──────────────────────────────────────────────────── */
-/* The legend renders above the fieldset's content box (no float), so it stacks over the
-   segments the way a .field label stacks over its select, with the same gap. */
-.segmented {
+/* ── Fret range: one field, two numbers ("Frets 0 – 12") ──────────────── */
+.range {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-.segmented legend {
+.range legend {
   padding: 0;
   margin-bottom: var(--space-1);
   font-weight: var(--font-weight-semibold);
 }
 
-.segment {
-  position: relative;
-}
-
-.segment input {
-  position: absolute;
-  opacity: 0;
-  inset: 0;
-  margin: 0;
-}
-
-.segment span {
-  display: inline-flex;
-  align-items: center;
+.range input {
   min-height: var(--hit-target);
-  padding-inline: var(--space-3);
+  padding-inline: var(--space-2);
   border: 1px solid var(--color-border-strong);
-  background: var(--color-surface-raised);
-}
-
-.segment:first-of-type span {
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
-.segment:last-of-type span {
-  margin-left: -1px;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-
-.segment input:checked + span {
-  background: var(--color-accent-soft);
-  box-shadow: inset 0 -2px 0 var(--color-accent-strong);
-  font-weight: var(--font-weight-semibold);
-}
-
-.segment input:focus-visible + span {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-/* ── Quality chips ────────────────────────────────────────────────────── */
-.qualities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.chip {
-  min-height: var(--hit-target);
-  min-width: 3.25rem;
-  padding-inline: var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-raised);
-  font-weight: var(--font-weight-semibold);
-}
-
-.chip:hover {
-  border-color: var(--color-ink-muted);
-}
-
-.chip[aria-pressed='true'] {
-  border-color: var(--color-accent-strong);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
 }
 
 /* ── Rule panel ───────────────────────────────────────────────────────── */
@@ -213,7 +153,8 @@
 .cards {
   container: cards / inline-size;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  /* auto-fit: the three shapes share the row instead of leaving an empty fourth column. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: var(--space-4);
   list-style: none;
   padding: 0;
@@ -310,6 +251,13 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* Touch: secondary buttons get the full 44px target too. */
+@media (pointer: coarse) {
+  .small {
+    min-height: var(--hit-target);
+  }
+}
+
 .unreachable {
   display: grid;
   place-content: center;
@@ -337,6 +285,56 @@
 }
 
 /* ── Keys ─────────────────────────────────────────────────────────────── */
+/* Scale steps and chord chips, with the pitch ring after them: right under the chips on a
+   phone (tap a chip, see it on the ring), beside them, held in view, on a wide page. */
+.keyLayout {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.keyMain {
+  min-width: 0;
+}
+
+.ringFigure {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ringFigure figcaption {
+  max-width: 17.5rem;
+  text-align: center;
+}
+
+@container explore (width >= 48rem) {
+  .keyLayout {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .keyLayout .ringFigure {
+    position: sticky;
+    top: var(--space-4);
+    align-self: start;
+  }
+}
+
+/* Scales: the ring beside its caption when there is room. */
+.ringRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.ringRow > figcaption {
+  flex: 1 1 14rem;
+  max-width: 32rem;
+}
+
 .steps {
   display: flex;
   flex-wrap: wrap;
@@ -359,6 +357,13 @@
 @container explore (width < 21rem) {
   .steps {
     grid-template-columns: repeat(2, auto minmax(1.75rem, auto));
+  }
+}
+
+/* Very large text on a small phone: one note and its step per row. */
+@container explore (width < 10.5rem) {
+  .steps {
+    grid-template-columns: auto minmax(1.75rem, auto);
   }
 }
 
@@ -393,38 +398,6 @@
   color: var(--color-accent-strong);
 }
 
-.degreeRow {
-  display: grid;
-  /* Seven across when there is room; fewer, wider chips on phones or with large text. */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  list-style: none;
-  padding: 0;
-}
-
-.degreeRow + p {
-  margin-top: var(--space-3);
-}
-
-.degreeChip {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  width: 100%;
-  min-height: 3.5rem;
-  padding: var(--space-2) var(--space-1);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-}
-
-.degreeChip[aria-pressed='true'] {
-  border-color: var(--color-accent-strong);
-  background: var(--color-accent-soft);
-  box-shadow: inset 0 -2px 0 var(--color-accent-strong);
-}
-
 .numeral {
   font-family: var(--font-serif);
   font-weight: var(--font-weight-bold);
@@ -434,6 +407,11 @@
 .degreeChord {
   font-size: var(--font-size-sm);
   color: var(--color-ink-muted);
+}
+
+/* Key chord chips sit between two notes: the same rhythm as the rest of the section. */
+.keyChips {
+  margin-block: var(--space-3);
 }
 
 /* The focused chip's notes as steps of the key; holds its line so the board doesn't jump. */
@@ -458,19 +436,6 @@
     outline-offset: -2px;
     text-decoration: underline 2px;
     text-underline-offset: 0.25em;
-  }
-
-  .chip[aria-pressed='true'],
-  .degreeChip[aria-pressed='true'],
-  .segment input:checked + span {
-    forced-color-adjust: none;
-    border-color: Highlight;
-    background: Highlight;
-    color: HighlightText;
-  }
-
-  .degreeChip[aria-pressed='true'] .degreeChord {
-    color: HighlightText;
   }
 
   .card[data-selected] {

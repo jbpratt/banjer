@@ -1,0 +1,165 @@
+/* Pitch-class ring. Drawn on a page surface: inks for lines and text, role fills + outline
+   for markers (design.md §5.1 shapes: root ■, chord ●, scale ○). */
+
+.ring {
+  display: block;
+  /* rem, so the drawing (and its text) grows with the user's text size. */
+  width: min(100%, 17.5rem);
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-sans);
+}
+
+.ring text {
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.track {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+.empty {
+  fill: var(--color-border-strong);
+}
+
+.step path,
+.half path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.step path {
+  stroke: var(--role-scale-ink);
+  stroke-width: 3;
+}
+
+.step text {
+  fill: var(--color-ink-muted);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Half steps: thicker and in the accent, as in the step strip. */
+.half path {
+  stroke: var(--color-accent-strong);
+  stroke-width: 6;
+}
+
+.half text {
+  fill: var(--color-accent-strong);
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+}
+
+.polygon {
+  fill: color-mix(in srgb, var(--role-chord) 18%, transparent);
+  stroke: var(--role-chord-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.name {
+  fill: var(--color-ink);
+  font-size: 16px;
+  font-weight: var(--font-weight-bold);
+}
+
+.mark {
+  stroke: var(--marker-outline);
+  stroke-width: 1.5;
+}
+
+.root .mark {
+  fill: var(--role-root);
+}
+
+.chord .mark {
+  fill: var(--role-chord);
+}
+
+.scale .mark {
+  fill: var(--color-surface-raised);
+  stroke: var(--role-scale-ink);
+  stroke-width: 2.5;
+}
+
+.degree {
+  fill: var(--role-on);
+  font-weight: var(--font-weight-bold);
+}
+
+.scale .degree {
+  fill: var(--color-ink);
+}
+
+.title {
+  fill: var(--color-ink);
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+}
+
+.subtitle {
+  fill: var(--color-ink-muted);
+  font-size: 12px;
+}
+
+/* Forced colours: system colours throughout; the shapes (■ ● ○, the polygon, thick half
+   steps) still carry every role. */
+@media (forced-colors: active) {
+  .ring {
+    forced-color-adjust: none;
+  }
+
+  .ring text,
+  .degree,
+  .scale .degree {
+    fill: CanvasText;
+  }
+
+  .track,
+  .step path,
+  .mark,
+  .scale .mark {
+    stroke: CanvasText;
+  }
+
+  .empty {
+    fill: CanvasText;
+  }
+
+  .mark,
+  .scale .mark {
+    fill: Canvas;
+  }
+
+  .half path,
+  .polygon,
+  .chord .mark,
+  .root .mark {
+    stroke: Highlight;
+  }
+
+  .half text {
+    fill: Highlight;
+  }
+
+  .polygon {
+    fill: none;
+    stroke-width: 3;
+  }
+
+  .chord .mark,
+  .root .mark {
+    fill: Highlight;
+    stroke: CanvasText;
+  }
+
+  .chord .degree,
+  .root .degree {
+    fill: HighlightText;
+  }
+}

@@ -18,10 +18,6 @@
   color: var(--color-ink-muted);
 }
 
-.missing {
-  color: var(--color-status-lost);
-}
-
 .form {
   display: grid;
   gap: var(--space-5);
@@ -80,17 +76,6 @@
 
 .field input[aria-invalid='true'] {
   border-color: var(--color-status-lost);
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.controls input[type='number'] {
-  width: 5rem;
 }
 
 .board {

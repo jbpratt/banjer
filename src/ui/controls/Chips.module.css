@@ -1,0 +1,156 @@
+/* Chips: quality, scale and key-chord pickers. Tokens from src/styles/tokens.css.
+   Selection follows one rule across Explore: a solid accent fill is what the page shows
+   (root, quality, scale); a soft tint is a highlight you can turn off (a chord in the key). */
+
+.set {
+  container: chip-set / inline-size;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Same treatment as the root picker's legend and a field's label. */
+.legend {
+  display: block;
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.groupLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink-muted);
+}
+
+/* grid: equal tracks, so chips line up in columns from one group to the next. Narrow
+   enough for five across a phone (a whole group of 7ths on one line). */
+.chips {
+  --chip-min: 3.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--chip-min)), 1fr));
+  gap: var(--space-2);
+}
+
+/* fill: a fixed run (seven degrees) sharing the row evenly. */
+.chips[data-layout='fill'] {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
+}
+
+/* wide: long names (scales), two to a row on a phone. */
+.chips[data-layout='wide'] {
+  --chip-min: 8rem;
+}
+
+/* Wide enough: group labels share a column on the left and every row of chips starts on
+   the same line. */
+@container chip-set (width >= 26rem) {
+  .rows {
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .group {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+  }
+
+  .chips {
+    --chip-min: 4.5rem;
+  }
+
+  /* Beside its label, long names take their own width: rows stay one line each. */
+  .chips[data-layout='wide'] {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+}
+
+/* ── Chip ─────────────────────────────────────────────────────────────── */
+.chip {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  min-width: 0;
+  min-height: var(--hit-target);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-tight);
+  text-align: center;
+  cursor: pointer;
+}
+
+.chip[data-variant='tile'] {
+  gap: 2px;
+  min-height: 3.5rem;
+  padding-block: var(--space-2);
+  font-weight: var(--font-weight-regular);
+}
+
+.chip:hover {
+  border-color: var(--color-ink);
+}
+
+/* The radio covers its chip, so the whole chip is the target and keeps native behaviour. */
+.chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chip:has(input:checked) {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: inset 0 -3px 0 var(--color-on-accent);
+}
+
+.chip:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  z-index: 1;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 -3px 0 var(--color-accent-strong);
+}
+
+@media (forced-colors: active) {
+  .chip:has(input:checked),
+  .chip[aria-pressed='true'] {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .chip[aria-pressed='true'] * {
+    color: HighlightText;
+  }
+}

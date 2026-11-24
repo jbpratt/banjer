@@ -85,3 +85,28 @@ export interface ChordDiagramProps {
   rows?: number
   className?: string
 }
+
+/** One note on a PitchRing. */
+export interface RingNote {
+  /** Semitones above the ring's tonic, 0–11. */
+  semis: number
+  /** Spelled name shown outside the ring: 'F♯'. */
+  name: string
+  /** Shown inside the marker: a degree ('5', '♭7') or 'R'. */
+  label: string
+  /** root ■, chord ●, scale ○: the fretboard's marker vocabulary. */
+  role: 'root' | 'chord' | 'scale'
+}
+
+export interface PitchRingProps {
+  /** In scale order from the tonic, which sits at 12 o'clock. */
+  notes: readonly RingNote[]
+  /** Draw the steps between consecutive notes (a scale), half steps marked. */
+  steps?: boolean
+  /** Semitones of a chord's tones in stacking order (1 3 5 7), joined as a polygon. */
+  chord?: readonly number[]
+  title: string
+  subtitle?: string
+  /** One-sentence summary for screen readers: "G major: G A B C D E F♯; D7 highlighted: D F♯ A C". */
+  label: string
+}

@@ -1,23 +1,59 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Position, ScaleId, Setup, TuningId } from '../../../domain/types.ts'
-import { FRET_COUNT, SCALES, parseChord, pitchClass, prettyNote, soundingMidi, spellInChord, spellInScale, spelledName } from '../../../theory/index.ts'
+import { CHORD_QUALITIES, FRET_COUNT, SCALES, pitchClass, prettyNote, soundingMidi, spellInChord, spellInScale, spelledName } from '../../../theory/index.ts'
 import type { SpelledNote } from '../../../theory/index.ts'
-import { Fretboard } from '../../../ui/instrument/index.ts'
+import { ChoiceChips } from '../../../ui/controls/Chips.tsx'
+import { RootPicker } from '../../../ui/controls/RootPicker.tsx'
+import { Segmented } from '../../../ui/controls/Segmented.tsx'
+import { Toolbar } from '../../../ui/controls/Toolbar.tsx'
+import { Fretboard, PitchRing } from '../../../ui/instrument/index.ts'
 import { getEngine } from '../../audio.ts'
 import { chordToneMarkers, scaleMarkers } from '../../markers.ts'
 import styles from '../Views.module.css'
+import exploreStyles from './Explore.module.css'
+import { QUALITY_NAMES, chordRing, chordTitle, qualityGroups, scaleRing } from './lab.ts'
 import type { LabLabels } from './lab.ts'
-
-const ROOTS: SpelledNote[] = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 interface Props {
   tuning: TuningId
   labels: LabLabels
   leftHanded: boolean
-  /** Explore's shared toolbar controls (tuning, labels). */
+  /** Explore's shared board setup (tuning, labels), first in the toolbar's setup row. */
   controls: ReactNode
 }
+
+const SHOW_OPTIONS = [
+  { value: 'scale', label: 'Scale' },
+  { value: 'chord', label: 'Chord tones' },
+] as const
+
+// Grouped by sound; inside a group its own word is dropped from what shows ("Major
+// pentatonic" reads "Pentatonic" under Major) but kept in the accessible name.
+const SCALE_CHIPS = (['Major', 'Minor'] as const).map((group) => ({
+  label: group,
+  options: Object.values(SCALES)
+    .filter((s) => s.minor === (group === 'Minor'))
+    .map((s) => {
+      const rest = s.name.startsWith(`${group} `) ? s.name.slice(group.length + 1) : null
+      return {
+        value: s.id,
+        label: rest ? (
+          <>
+            <span className="visually-hidden">{group} </span>
+            {rest[0]!.toUpperCase() + rest.slice(1)}
+          </>
+        ) : (
+          s.name
+        ),
+      }
+    }),
+}))
+
+const QUALITY_CHIPS = qualityGroups(Object.keys(CHORD_QUALITIES)).map((g) => ({
+  label: g.label,
+  options: g.qualities.map((q) => ({ value: q, label: QUALITY_NAMES[q] ?? q })),
+}))
 
 /** Any scale or chord's tones across a fret range, with capo. */
 export function ScaleView({ tuning, labels, leftHanded, controls }: Props) {
@@ -25,16 +61,12 @@ export function ScaleView({ tuning, labels, leftHanded, controls }: Props) {
   const [what, setWhat] = useState<'scale' | 'chord'>('scale')
   const [root, setRoot] = useState<SpelledNote>('G')
   const [scale, setScale] = useState<ScaleId>('major-pentatonic')
-  const [chordInput, setChord] = useState('G')
+  const [quality, setQuality] = useState('')
   const [lo, setLo] = useState(0)
   const [hi, setHi] = useState(12)
   const [heard, setHeard] = useState('')
-  const statusId = useId()
 
-  // A lower-case root reads as the chord ('g7' is G7), as in chord routes.
-  const chord = chordInput.trim().charAt(0).toUpperCase() + chordInput.trim().slice(1)
-  const parsed = parseChord(chord)
-  const invalid = what === 'chord' && !parsed
+  const chord = root + quality
   const setup: Setup = useMemo(() => ({ tuning, capo }), [tuning, capo])
   const frets: [number, number] = [Math.min(lo, hi), Math.max(lo, hi)]
   const kind = labels === 'note' ? 'note' : 'interval'
@@ -44,84 +76,78 @@ export function ScaleView({ tuning, labels, leftHanded, controls }: Props) {
     [setup, what, root, scale, chord, frets[0], frets[1], kind],
   )
   const engine = getEngine()
+  const ring = what === 'scale' ? scaleRing(root, scale) : chordRing(root, quality)
 
   useEffect(() => {
     if (markers) engine.prewarm(markers.map((m) => soundingMidi(setup, m.pos)))
   }, [markers, setup, engine])
 
   const subject =
-    what === 'scale' ? `${prettyNote(root)} ${SCALES[scale].name.toLowerCase()} scale` : `${prettyNote(chord)} chord tones`
+    what === 'scale' ? `${prettyNote(root)} ${SCALES[scale].name.toLowerCase()} scale` : `${chordTitle(root, quality)} chord tones`
 
   function audition(pos: Position) {
     const midi = soundingMidi(setup, pos)
     engine.audition([midi])
     const pc = pitchClass(midi)
-    const note = what === 'scale' ? spellInScale(root, scale, pc) : parsed ? spellInChord(parsed.root, parsed.quality, pc) : null
+    const note = what === 'scale' ? spellInScale(root, scale, pc) : spellInChord(root, quality, pc)
     setHeard(`String ${pos.string}, fret ${pos.fret}, ${note ? prettyNote(spelledName(midi, note)) : midi}`)
   }
 
   return (
     <>
-      <form className={styles.controls} onSubmit={(e) => e.preventDefault()}>
-        {controls}
-        <label className={styles.field}>
-          Capo
-          <input type="number" min={0} max={9} value={capo} onChange={(e) => setCapo(clampInt(e.target.value, 0, 9))} />
-        </label>
-        <label className={styles.field}>
-          Show
-          <select value={what} onChange={(e) => setWhat(e.target.value as 'scale' | 'chord')}>
-            <option value="scale">Scale</option>
-            <option value="chord">Chord</option>
-          </select>
-        </label>
-        {what === 'scale' ? (
+      <Toolbar
+        subject={<RootPicker legend="Root" value={root} onChange={setRoot} />}
+        detail={
           <>
-            <label className={styles.field}>
-              Root
-              <select value={root} onChange={(e) => setRoot(e.target.value as SpelledNote)}>
-                {ROOTS.map((r) => (
-                  <option key={r} value={r}>
-                    {prettyNote(r)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.field}>
-              Scale
-              <select value={scale} onChange={(e) => setScale(e.target.value as ScaleId)}>
-                {Object.values(SCALES).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Segmented legend="Show" options={SHOW_OPTIONS} value={what} onChange={setWhat} />
+            {what === 'scale' ? (
+              <ChoiceChips legend="Scale" layout="wide" groups={SCALE_CHIPS} value={scale} onChange={setScale} />
+            ) : (
+              <ChoiceChips legend="Quality" groups={QUALITY_CHIPS} value={quality} onChange={setQuality} />
+            )}
           </>
-        ) : (
-          <label className={styles.field}>
-            Chord symbol
-            <input
-              value={chordInput}
-              onChange={(e) => setChord(e.target.value)}
-              aria-invalid={invalid}
-              aria-describedby={invalid ? statusId : undefined}
-              placeholder="G, Em, D7, Bbmaj7"
-              size={8}
-            />
-          </label>
-        )}
-        <label className={styles.field}>
-          From fret
-          <input type="number" min={0} max={FRET_COUNT} value={lo} onChange={(e) => setLo(clampInt(e.target.value, 0, FRET_COUNT))} />
-        </label>
-        <label className={styles.field}>
-          To fret
-          <input type="number" min={0} max={FRET_COUNT} value={hi} onChange={(e) => setHi(clampInt(e.target.value, 0, FRET_COUNT))} />
-        </label>
-      </form>
+        }
+        setup={
+          <>
+            {controls}
+            <label className={styles.field}>
+              Capo
+              <input type="number" min={0} max={9} value={capo} onChange={(e) => setCapo(clampInt(e.target.value, 0, 9))} />
+            </label>
+            <fieldset className={exploreStyles.range}>
+              <legend>Frets</legend>
+              <input
+                type="number"
+                aria-label="From fret"
+                min={0}
+                max={FRET_COUNT}
+                value={lo}
+                onChange={(e) => setLo(clampInt(e.target.value, 0, FRET_COUNT))}
+              />
+              <span aria-hidden="true">–</span>
+              <input
+                type="number"
+                aria-label="To fret"
+                min={0}
+                max={FRET_COUNT}
+                value={hi}
+                onChange={(e) => setHi(clampInt(e.target.value, 0, FRET_COUNT))}
+              />
+            </fieldset>
+          </>
+        }
+      />
 
-      <h2 className={styles.sectionTitle}>{invalid ? 'Chord tones' : subject[0]!.toUpperCase() + subject.slice(1)}</h2>
+      <h2 className={styles.sectionTitle}>{subject[0]!.toUpperCase() + subject.slice(1)}</h2>
+      <figure className={exploreStyles.ringRow}>
+        <PitchRing {...ring} />
+        <figcaption className={styles.meta}>
+          One octave, one fret per step, {ring.title} at the top.{' '}
+          {what === 'scale'
+            ? 'Gaps are the steps between notes: two positions is a whole step, H a half step, 1½ a minor 3rd. The same scale makes the same shape from any root.'
+            : 'Its tones joined in stacking order, so you can see the 3rds it is built from.'}
+        </figcaption>
+      </figure>
       {markers && (
         <div className={styles.board}>
           <Fretboard
@@ -134,9 +160,8 @@ export function ScaleView({ tuning, labels, leftHanded, controls }: Props) {
           />
         </div>
       )}
-      {/* One live region for both: what you tapped, or why there's no board. */}
-      <p id={statusId} className={invalid ? styles.missing : styles.meta} role="status" aria-live="polite">
-        {invalid ? `Unknown chord symbol “${chordInput}”. Try G, Em, D7, Cmaj7, Asus4.` : heard || 'Click a note to hear it.'}
+      <p className={styles.meta} role="status" aria-live="polite">
+        {heard || 'Click a note to hear it.'}
       </p>
     </>
   )

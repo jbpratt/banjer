@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { ChordShape, Setup } from '../domain/types.ts'
 import {
   chordNotes,
+  enharmonicTwin,
+  rootChoices,
+  scalePitchClasses,
+  stepSizes,
   identifyChord,
   isValidPosition,
   isVoicingOf,
@@ -178,6 +182,34 @@ describe('scales', () => {
     const dMinor = scalePositions(openG, 'D', 'natural-minor', [0, 4])
     expect(dMinor.find((p) => p.pos.string === 3 && p.pos.fret === 3)).toMatchObject({ degree: 'b6', note: 'Bb' })
     expect(dMinor.some((p) => p.pos.string === 2 && p.pos.fret === 0)).toBe(false) // open B isn't in D minor
+  })
+
+  it('measures the steps between scale notes, wrapping to the octave', () => {
+    expect(stepSizes(scalePitchClasses('G', 'major'))).toEqual([2, 2, 1, 2, 2, 2, 1])
+    expect(stepSizes(scalePitchClasses('A', 'major-pentatonic'))).toEqual([2, 2, 3, 2, 3])
+    expect(stepSizes(scalePitchClasses('E', 'blues'))).toEqual([3, 2, 1, 1, 3, 2])
+    expect(stepSizes([7])).toEqual([12])
+  })
+})
+
+describe('root choices', () => {
+  it('lists twelve roots chromatically from C, keeping the current spelling', () => {
+    const g = rootChoices('G')
+    expect(g.map((c) => c.value)).toEqual(['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'])
+    expect(g.filter((c) => c.natural).map((c) => c.value)).toEqual(['C', 'D', 'E', 'F', 'G', 'A', 'B'])
+    expect(g[1]).toEqual({ pc: 1, value: 'Db', also: ['C#'], natural: false })
+    expect(g[0]!.also).toEqual([])
+    // A route's spelling wins on its own key: C♯ over D♭, E♯ on F's key.
+    expect(rootChoices('C#')[1]).toEqual({ pc: 1, value: 'C#', also: ['Db'], natural: false })
+    expect(rootChoices('E#')[5]).toEqual({ pc: 5, value: 'E#', also: ['F'], natural: true })
+    expect(rootChoices('Cb')[11]).toMatchObject({ value: 'Cb', also: ['B'] })
+  })
+
+  it('finds the other plain spelling', () => {
+    expect(enharmonicTwin('C#')).toBe('Db')
+    expect(enharmonicTwin('Gb')).toBe('F#')
+    expect(enharmonicTwin('E#')).toBe('F')
+    expect(enharmonicTwin('G')).toBeNull()
   })
 })
 

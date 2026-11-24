@@ -181,3 +181,34 @@ const INTERVAL_LABELS = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', '
 export function intervalLabel(root: PitchClass, pc: PitchClass): string {
   return INTERVAL_LABELS[pitchClass(pc - root)]!
 }
+
+/** The usual spelling of each pitch class as a root or key: flats except F♯ (C D♭ D E♭ … B). */
+export const DEFAULT_ROOTS: readonly NoteName[] = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+
+export interface RootChoice {
+  pc: PitchClass
+  /** What choosing it gives: `current` on its own pitch class, else the default spelling. */
+  value: SpelledNote
+  /** Other plain spellings of the same pitch class, shown under `value` (D♭ over C♯). */
+  also: NoteName[]
+  /** A white key: one letter, no accidental, in its default spelling. */
+  natural: boolean
+}
+
+/**
+ * The twelve roots in chromatic order from C, for a root picker. The pitch class of
+ * `current` keeps its spelling (C♯ stays C♯, E♯ sits on F's key), the rest use
+ * `DEFAULT_ROOTS`.
+ */
+export function rootChoices(current: SpelledNote): RootChoice[] {
+  const cur = pcOf(current)
+  return DEFAULT_ROOTS.map((d, pc) => {
+    const value = pc === cur ? current : d
+    return { pc, value, also: plainNames(pc).filter((n) => n !== value), natural: d.length === 1 }
+  })
+}
+
+/** The other plain spelling of a root: C♯ ↔ D♭, E♯ → F, C♭ → B. Null for G, D, … */
+export function enharmonicTwin(note: SpelledNote): NoteName | null {
+  return plainNames(pcOf(note)).find((n) => n !== note) ?? null
+}

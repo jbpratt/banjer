@@ -25,6 +25,7 @@ and PRs run install, typecheck, test, and build; a push to `main` then deploys `
 | `src/theory/` | Pure music logic (pitch, neck, scales, chords, voicings, keys, validation) |
 | `src/audio/` | Web Audio banjo synth (`AudioEngine` in `types.ts`) |
 | `src/ui/instrument/` | Fretboard, ChordDiagram, dev Gallery at `#gallery` (props in `types.ts`) |
+| `src/ui/controls/` | Explore controls: Toolbar, RootPicker, ChoiceChips/ChipSet, Segmented |
 | `src/app/` | Shell, Explore (`views/explore/`), settings |
 | `src/styles/` | Design tokens and global CSS (spec in `docs/research/design.md`) |
 | `content/shapes.ts` | Chord-shape library; Claude authors it |

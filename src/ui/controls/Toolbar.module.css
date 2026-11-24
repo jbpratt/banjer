@@ -1,0 +1,93 @@
+/* Explore toolbar. Laid out by its own width (in rem, so it also adapts to larger text). */
+
+.toolbar {
+  container: toolbar / inline-size;
+  margin-bottom: var(--space-5);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'subject'
+    'detail'
+    'setup';
+  gap: var(--space-4);
+}
+
+.subject {
+  grid-area: subject;
+  min-width: 0;
+}
+
+.detail {
+  grid-area: detail;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Fields and segmented controls share one baseline: label above, 44px control below. */
+.setup {
+  grid-area: setup;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Wide enough for two digits and the spinner. */
+.setup input[type='number'] {
+  inline-size: 4rem;
+}
+
+.setup select {
+  max-inline-size: 100%;
+}
+
+@container toolbar (width >= 44rem) {
+  .grid {
+    grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+    grid-template-areas:
+      'subject detail'
+      'setup setup';
+    gap: var(--space-4) var(--space-6);
+  }
+
+  /* No detail (Keys): setup beside the picker, bottoms aligned, a rule between them. */
+  .grid:not(:has(> .detail)) {
+    grid-template-areas: 'subject setup';
+  }
+
+  .grid:not(:has(> .detail)) > .setup {
+    align-self: end;
+    padding-top: 0;
+    padding-left: var(--space-6);
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+/* Wide desktop: setup becomes a third column instead of a row of its own, so the board
+   starts higher and the right of the toolbar isn't left empty. */
+@container toolbar (width >= 66rem) {
+  .grid:has(> .detail) {
+    grid-template-columns: minmax(0, 21rem) minmax(0, 1fr) minmax(0, 16rem);
+    grid-template-areas: 'subject detail setup';
+    column-gap: var(--space-5);
+  }
+
+  .grid:has(> .detail) > .setup {
+    align-content: start;
+    column-gap: var(--space-3);
+    align-self: start;
+    padding-top: 0;
+    padding-left: var(--space-5);
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
+}

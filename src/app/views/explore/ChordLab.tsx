@@ -17,6 +17,9 @@ import {
   spell,
 } from '../../../theory/index.ts'
 import type { SpelledNote } from '../../../theory/index.ts'
+import { ChoiceChips } from '../../../ui/controls/Chips.tsx'
+import { RootPicker } from '../../../ui/controls/RootPicker.tsx'
+import { Toolbar } from '../../../ui/controls/Toolbar.tsx'
 import { ChordDiagram, Fretboard, chordWindow } from '../../../ui/instrument/index.ts'
 import { getEngine } from '../../audio.ts'
 import type { Content } from '../../content.ts'
@@ -39,7 +42,7 @@ import {
   labRoot,
   lowestFretted,
   moveText,
-  rootOptions,
+  qualityGroups,
   spellingText,
   strumMidis,
   voicingShape,
@@ -53,7 +56,7 @@ interface Props {
   quality: string
   labels: LabLabels
   leftHanded: boolean
-  /** Explore's shared toolbar controls (tuning, labels), rendered after Root. */
+  /** Explore's shared board setup (tuning, labels), the toolbar's setup row. */
   controls: ReactNode
   onChord: (root: SpelledNote, quality: string) => void
 }
@@ -61,6 +64,10 @@ interface Props {
 /** The board shows at least the nut to fret 15, more when a shape reaches past it. */
 const BOARD_TOP = 15
 const COMPARE_GAP_MS = 900
+const QUALITY_CHIPS = qualityGroups(LAB_QUALITIES).map((g) => ({
+  label: g.label,
+  options: g.qualities.map((q) => ({ value: q, label: QUALITY_NAMES[q] ?? q })),
+}))
 
 export function ChordLab({ content, tuning, root, quality, labels, leftHanded, controls, onChord }: Props) {
   const setup: Setup = useMemo(() => ({ tuning, capo: 0 }), [tuning])
@@ -138,33 +145,25 @@ export function ChordLab({ content, tuning, root, quality, labels, leftHanded, c
 
   return (
     <>
-      <div className={viewStyles.controls}>
-        <label className={viewStyles.field}>
-          Root
-          <select value={root} onChange={(e) => choose(e.target.value as SpelledNote, quality)}>
-            {rootOptions(root).map((r) => (
-              <option key={r} value={r}>
-                {prettyNote(r)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {controls}
-      </div>
-
-      <div className={styles.qualities} role="group" aria-label="Chord quality">
-        {LAB_QUALITIES.map((q) => (
-          <button
-            key={q}
-            type="button"
-            className={styles.chip}
-            aria-pressed={q === quality}
-            onClick={() => choose(root, q)}
-          >
-            {QUALITY_NAMES[q] ?? q}
-          </button>
-        ))}
-      </div>
+      <Toolbar
+        subject={
+          <RootPicker
+            legend="Root"
+            value={root}
+            onChange={(r) => choose(r, quality)}
+            canRespell={(twin) => labRoot(twin, quality) === twin}
+          />
+        }
+        detail={
+          <ChoiceChips
+            legend="Quality"
+            groups={QUALITY_CHIPS}
+            value={quality}
+            onChange={(q) => choose(root, q)}
+          />
+        }
+        setup={controls}
+      />
 
       <div className={styles.rule}>
         <h2 className={styles.ruleTitle}>
