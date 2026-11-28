@@ -1,11 +1,12 @@
 import { Suspense, lazy, useEffect, useMemo, useSyncExternalStore } from 'react'
-import { getEngine, installUnlock } from './audio.ts'
+import { getEngine, installUnlock, useMetronomeRunning } from './audio.ts'
 import { useContent } from './content.ts'
 import { formatRoute, parseRoute } from './routes.ts'
 import type { Route } from './routes.ts'
 import { useSettings, useTheme } from './settingsStore.ts'
 import styles from './App.module.css'
 import { Explore } from './views/explore/Explore.tsx'
+import { Metronome } from './views/Metronome.tsx'
 import { Settings } from './views/Settings.tsx'
 
 const Gallery = lazy(() => import('../ui/instrument/Gallery.tsx').then((m) => ({ default: m.Gallery })))
@@ -32,6 +33,7 @@ export function App() {
   const settings = useSettings()
   const content = useContent()
   useTheme(settings.theme)
+  const metronomeRunning = useMetronomeRunning()
 
   useEffect(() => installUnlock(), [])
   useEffect(() => {
@@ -86,6 +88,8 @@ export function App() {
         )}
         {route.view === 'settings' && <Settings settings={settings} />}
       </main>
+      {/* In the shell, not in a view, so the click keeps going across routes. */}
+      <Metronome settings={settings.metronome} running={metronomeRunning} />
     </div>
   )
 }

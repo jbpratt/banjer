@@ -29,4 +29,45 @@ export interface AudioEngine {
   stop(): void
   /** Master volume, 0–1. */
   setVolume(volume: number): void
+  /** The click track. Shares this engine's context and volume; stop() doesn't silence it. */
+  readonly metronome: Metronome
+}
+
+export interface MetronomeConfig {
+  /** Quarter-note beats per minute, clamped to METRONOME_BPM. */
+  bpm: number
+  /** Beats per bar: 2, 3 or 4. */
+  beatsPerBar: number
+  /** Clicks per beat: 1 (beats) or 2 (eighths, the clawhammer "bum-ditty"). */
+  subdivision: 1 | 2
+  /** Louder, higher click on beat 1. */
+  accent: boolean
+}
+
+export const METRONOME_BPM = { min: 40, max: 240 } as const
+
+/** One click, reported to the UI around when it is heard. */
+export interface Tick {
+  /** 0-based beat within the bar. */
+  beat: number
+  /** 0-based subdivision within the beat (0 = on the beat). */
+  sub: number
+}
+
+export interface Metronome {
+  /** Start clicking (from beat 1) with this config; restarts if already running. Call from a gesture. */
+  start(config: MetronomeConfig): void
+  /**
+   * Change config while running without losing the pulse: a new tempo applies from the
+   * next click, a new meter from the next bar line. No-op when stopped.
+   */
+  update(config: MetronomeConfig): void
+  stop(): void
+  isRunning(): boolean
+  /**
+   * Called for each click near the moment it is heard (output latency included), for beat
+   * lights only; sound is never driven by this. Also called with null on stop. Returns an
+   * unsubscriber.
+   */
+  onTick(fn: (tick: Tick | null) => void): () => void
 }

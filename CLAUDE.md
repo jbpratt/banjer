@@ -26,7 +26,7 @@ and PRs run install, typecheck, test, and build; a push to `main` then deploys `
 | `src/audio/` | Web Audio banjo synth (`AudioEngine` in `types.ts`) |
 | `src/ui/instrument/` | Fretboard, ChordDiagram, dev Gallery at `#gallery` (props in `types.ts`) |
 | `src/ui/controls/` | Explore controls: Toolbar, RootPicker, ChoiceChips/ChipSet, Segmented |
-| `src/app/` | Shell, Explore (`views/explore/`), settings |
+| `src/app/` | Shell, Explore (`views/explore/`), metronome dock (`views/Metronome.tsx`), settings |
 | `src/styles/` | Design tokens and global CSS (spec in `docs/research/design.md`) |
 | `content/shapes.ts` | Chord-shape library; Claude authors it |
 | `docs/research/` | Clawhammer and design research the content and UI are built from |
@@ -36,7 +36,7 @@ only `src/domain` types.
 
 ## Explore links
 
-Explore is the whole app. Point the learner at it in chat:
+Explore is the whole app (plus the metronome dock). Point the learner at it in chat:
 `#/explore/chords/D7` (chord lab: major shapes up the neck and the one-note moves to any
 quality), `#/explore/keys/G` (scale steps, I–vii° and diatonic 7ths), `#/explore/scales`.
 Theory lives in `src/theory/voicings.ts`.

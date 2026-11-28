@@ -24,6 +24,8 @@ quality. Claude extends it as the learner's theory grows.
 4. **Linkable.** Every chord and key has a URL (`#/explore/chords/D7`), so Claude can point
    at exactly the thing to look at.
 5. **Proven theory.** If the lab says a shape is G7, a test says so too.
+6. **A metronome to practice against.** It lives in the app shell, not a view, so the click
+   keeps going while you move around Explore.
 
 ## Music-model principles
 
@@ -74,7 +76,7 @@ quality. Claude extends it as the learner's theory grows.
 - Mic listening or grading
 - Lessons, practice queues, or progress tracking (removed 2026-11-21 by request)
 - Accounts, sync, or any backend
-- Playback of tunes, metronome, or tab (removed 2026-11-21 by request)
+- Playback of tunes or tab (removed 2026-11-21 by request)
 - Standard notation
 - Three-finger / bluegrass content (the model supports it; the content doesn't)
 - In-app Claude chat (the schema is ready for it)

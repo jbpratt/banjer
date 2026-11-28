@@ -3,6 +3,7 @@
 // platform has them, inline otherwise (Node tests, or a worker that failed).
 import type { Midi } from '../domain/types.ts'
 import { renderPluck } from './dsp.ts'
+import { createMetronome } from './metronome.ts'
 import { BACKGROUND, createWorkerRenderer, type PluckRenderer } from './render.ts'
 import { TONE, type Variant } from './tone.ts'
 import type { AudioEngine, AuditionOptions } from './types.ts'
@@ -282,6 +283,12 @@ export function createAudioEngine(opts: EngineOptions = {}): AudioEngine {
     g.bus = createBus(g.ctx, g.mix)
   }
 
+  /** Its own bus into the mix, so stop() (which fades the audition bus) leaves it running. */
+  const metronome = createMetronome(() => {
+    const g = ensureGraph()
+    return { ctx: g.ctx, destination: g.mix }
+  })
+
   return {
     async unlock() {
       const g = ensureGraph()
@@ -325,5 +332,7 @@ export function createAudioEngine(opts: EngineOptions = {}): AudioEngine {
       // Squared taper: the slider's midpoint sounds roughly half as loud, not barely quieter.
       graph?.out.gain.setTargetAtTime(volume * volume, graph.ctx.currentTime, 0.015)
     },
+
+    metronome,
   }
 }

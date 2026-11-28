@@ -248,6 +248,23 @@ describe('routes and settings', () => {
       leftHanded: true,
     })
   })
+  it('parses metronome settings defensively', () => {
+    const m = (metronome: unknown) => parseSettings(JSON.stringify({ metronome })).metronome
+    expect(m(undefined)).toEqual(DEFAULT_SETTINGS.metronome)
+    expect(m('fast')).toEqual(DEFAULT_SETTINGS.metronome)
+    expect(m(null)).toEqual(DEFAULT_SETTINGS.metronome)
+    expect(m({ bpm: 120.6, beatsPerBar: 3, subdivision: 2, accent: false, open: true })).toEqual({
+      bpm: 121,
+      beatsPerBar: 3,
+      subdivision: 2,
+      accent: false,
+      open: true,
+    })
+    expect(m({ bpm: 1000, beatsPerBar: 5, subdivision: 3, accent: 'yes', open: 1 })).toEqual({ ...DEFAULT_SETTINGS.metronome, bpm: 240 })
+    expect(m({ bpm: 5 }).bpm).toBe(40)
+    expect(m({ bpm: '96' }).bpm).toBe(DEFAULT_SETTINGS.metronome.bpm)
+    expect(m({ beatsPerBar: '3' }).beatsPerBar).toBe(DEFAULT_SETTINGS.metronome.beatsPerBar)
+  })
 })
 
 describe('quality chips', () => {

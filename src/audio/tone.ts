@@ -87,4 +87,26 @@ export const TONE = {
     /** `stop()` fade, ms. */
     stopFadeMs: 60,
   },
+
+  /** The click track: a short woodblock-ish tick, a damped sine burst rendered once per kind. */
+  metronome: {
+    /** Beat 1 when accent is on: higher and louder. `gain` is the rendered peak; keep ≤ 0.9. */
+    accent: { hz: 2400, gain: 0.9 },
+    /** Every other beat. */
+    beat: { hz: 1600, gain: 0.65 },
+    /** The off-beat eighth ("ditty"), softer so the pulse stays on the beat. */
+    sub: { hz: 1600, gain: 0.35 },
+    /** An inharmonic upper partial, as a ratio of `hz`, for the wood. Level relative to the fundamental. */
+    overtone: { ratio: 2.7, level: 0.25 },
+    /** Time constant of the exponential decay, ms. Shorter is drier and tickier. */
+    decayMs: 6,
+    /** Raised-cosine fade-in, ms. Just enough to keep the attack from popping. */
+    attackMs: 0.4,
+    /** Rendered length, ms; the decay is inaudible well before the end. */
+    lengthMs: 35,
+    /** Level of the click bus into the master mix. */
+    gain: 0.8,
+    /** `metronome.stop()` fade, ms. */
+    stopFadeMs: 30,
+  },
 }

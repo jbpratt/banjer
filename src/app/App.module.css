@@ -70,7 +70,8 @@
 .main {
   max-width: var(--layout-max-width);
   margin-inline: auto;
-  padding: var(--space-5) var(--layout-gutter) var(--space-8);
+  /* The bottom clears the metronome dock, so it never covers the end of the page. */
+  padding: var(--space-5) var(--layout-gutter) calc(var(--space-8) + var(--hit-target) + var(--space-4));
 }
 
 .loading {
