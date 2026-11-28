@@ -74,7 +74,13 @@ export function Fretboard({
   const scrollRef = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
   const measured = useElementWidth(figRef)
-  const labelChars = Math.max(0, ...markers.map((m) => (m.label && m.role !== 'muted' && m.state !== 'dim' ? displayLabel(m.label).length : 0)))
+  // Size for the longer of the two labels, so peeking at the other one never overflows.
+  const labelChars = Math.max(
+    0,
+    ...markers.map((m) =>
+      m.role !== 'muted' && m.state !== 'dim' ? Math.max(...[m.label, m.altLabel].map((l) => (l ? displayLabel(l).length : 0))) : 0,
+    ),
+  )
   // Until measured, draw the desktop board at 100% (the pre-measure default).
   const choice = measured.width
     ? chooseBoard(measured.width, frets, labelChars, measured.rem)
@@ -103,6 +109,9 @@ export function Fretboard({
   // Hit targets (explorer mode).
   const targets = useMemo(() => (onSelect ? hitTargets(g, setup) : []), [onSelect, g, setup])
   const [cursor, setCursor] = useState(0)
+  /** The position whose marker shows its other label (note ↔ degree): hovered or keyboard-focused. */
+  const [peek, setPeek] = useState<string | null>(null)
+  const posKey = (pos: { string: number; fret: number }) => `${pos.string}-${pos.fret}`
   const targetRefs = useRef<(SVGGElement | null)[]>([])
   const cur = Math.min(cursor, Math.max(0, targets.length - 1))
 
@@ -352,7 +361,14 @@ export function Fretboard({
         <g aria-hidden="true">
           {placed.map(({ m, i, p }) => (
             <g key={i} transform={`translate(${X(p.x)} ${p.y})`}>
-              <MarkerGlyph role={m.role} d={d} state={m.state} label={m.label} finger={m.finger} leftHanded={leftHanded} />
+              <MarkerGlyph
+                role={m.role}
+                d={d}
+                state={m.state}
+                label={m.altLabel && peek === posKey(m.pos) ? m.altLabel : m.label}
+                finger={m.finger}
+                leftHanded={leftHanded}
+              />
             </g>
           ))}
         </g>
@@ -377,7 +393,17 @@ export function Fretboard({
                   setCursor(i)
                   onSelect(t.pos)
                 }}
-                onFocus={() => setCursor(i)}
+                onFocus={(e) => {
+                  setCursor(i)
+                  // Keyboard focus peeks too; a click's focus doesn't, or the swap would stick.
+                  if (e.currentTarget.matches(':focus-visible')) setPeek(posKey(t.pos))
+                }}
+                onBlur={() => setPeek((k) => (k === posKey(t.pos) ? null : k))}
+                // Mouse and pen only: a tap's synthetic hover would leave the label swapped.
+                onPointerEnter={(e) => {
+                  if (e.pointerType !== 'touch') setPeek(posKey(t.pos))
+                }}
+                onPointerLeave={() => setPeek((k) => (k === posKey(t.pos) ? null : k))}
                 onKeyDown={(e) => onTargetKey(e, i)}
               >
                 <rect className={styles.hit} x={X(t.x) - t.w / 2} y={t.y - t.h / 2} width={t.w} height={t.h} />

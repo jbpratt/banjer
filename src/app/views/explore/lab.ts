@@ -146,12 +146,19 @@ function samePos(a: Position, b: Position): boolean {
 }
 
 /** Label and spoken name for a lab marker; notes spelled as chord tones (B♭ in Gm7). */
-function tone(setup: Setup, pos: Position, root: SpelledNote, quality: string, kind: LabLabels): Pick<FretMarker, 'label' | 'spoken'> {
+function tone(
+  setup: Setup,
+  pos: Position,
+  root: SpelledNote,
+  quality: string,
+  kind: LabLabels,
+): Pick<FretMarker, 'label' | 'altLabel' | 'spoken'> {
   const pc = pitchClass(soundingMidi(setup, pos))
   const note = spellInChord(root, quality, pc)
-  if (kind === 'note') return { label: prettyNote(note), spoken: spokenNote(note) }
   const d = chordDegree(quality, pitchClass(pc - pcOf(root)))
-  return { label: d ? degreeText(d) : '?', spoken: spokenNote(note) }
+  const name = prettyNote(note)
+  const degree = d ? degreeText(d) : '?'
+  return kind === 'note' ? { label: name, altLabel: degree, spoken: spokenNote(note) } : { label: degree, altLabel: name, spoken: spokenNote(note) }
 }
 
 /**
@@ -211,7 +218,8 @@ export function keyMarkers(
     const pc = pitchClass(p.midi)
     const inChord = tones?.has(pc) ?? false
     const isChordRoot = parsed ? pc === pcOf(parsed.root) : p.isRoot
-    const text = { label: kind === 'note' ? prettyNote(p.note) : p.degree, spoken: spokenNote(p.note) }
+    const [label, altLabel] = kind === 'note' ? [prettyNote(p.note), p.degree] : [p.degree, prettyNote(p.note)]
+    const text = { label, altLabel, spoken: spokenNote(p.note) }
     if (!tones) return { pos: p.pos, role: p.isRoot ? 'root' : 'scale', ...text }
     if (!inChord) return { pos: p.pos, role: 'scale', state: 'dim', stateText: 'not in the chord', ...text }
     return { pos: p.pos, role: isChordRoot ? 'root' : 'chord', ...text }

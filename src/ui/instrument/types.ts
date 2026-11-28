@@ -24,6 +24,11 @@ export interface FretMarker {
   role: MarkerRole
   /** Text inside the marker: note name, interval, or finger. At most 2 characters. */
   label?: string
+  /**
+   * The label not chosen: the note when `label` is a degree, the degree when it is a note.
+   * Shown in its place while the position is hovered or keyboard-focused.
+   */
+  altLabel?: string
   state?: MarkerState
   /** Left-hand finger to show with the marker. */
   finger?: Finger

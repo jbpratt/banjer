@@ -68,9 +68,11 @@ function marker(ctx: LabelCtx, m: FretMarker, midi: number, finger?: Finger | nu
   switch (ctx.kind) {
     case 'note':
       m.label = prettyNote(note)
+      m.altLabel = intervalText(ctx.rootPc, pitchClass(midi))
       break
     case 'interval':
       m.label = intervalText(ctx.rootPc, pitchClass(midi))
+      m.altLabel = prettyNote(note)
       break
     case 'finger':
       if (finger != null) m.label = String(finger)

@@ -105,6 +105,16 @@ describe('spelling', () => {
     expect(notes(keyMarkers(OPEN_G, 'F#', [0, 12], null, 'note')).has('E♯')).toBe(true)
     expect(notes(scaleMarkers(OPEN_G, 'D', 'natural-minor', [0, 12], 'note')).has('B♭')).toBe(true)
   })
+  it('gives every labelled marker the other label to peek at', () => {
+    const pairs = (ms: { label?: string; altLabel?: string }[]) => new Set(ms.filter((m) => m.label).map((m) => `${m.label}/${m.altLabel}`))
+    const cards = labCards(OPEN_G, 'G', 'm7')
+    const sel = cards.findIndex((c) => c.voicing)
+    expect(pairs(labMarkers(OPEN_G, 'G', 'm7', cards, sel, 'degree')).has('♭3/B♭')).toBe(true)
+    expect(pairs(labMarkers(OPEN_G, 'G', 'm7', cards, sel, 'note')).has('B♭/♭3')).toBe(true)
+    expect(pairs(keyMarkers(OPEN_G, 'F#', [0, 12], null, 'degree')).has('7/E♯')).toBe(true)
+    expect(pairs(chordToneMarkers(OPEN_G, 'Gm7', [0, 5], 'note')!)).toEqual(new Set(['G/R', 'B♭/♭3', 'D/5', 'F/♭7']))
+    expect(pairs(scaleMarkers(OPEN_G, 'G', 'major', [0, 5], 'interval')).has('R/G')).toBe(true)
+  })
   it('gives markers a spoken note and what their state means', () => {
     const cards = labCards(OPEN_G, 'G', 'm7')
     const m = labMarkers(OPEN_G, 'G', 'm7', cards, cards.findIndex((c) => c.voicing), 'degree')
