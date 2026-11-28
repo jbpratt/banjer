@@ -40,6 +40,8 @@ export function Metronome({ settings, running }: Props) {
   const dock = useRef<HTMLElement>(null)
   const toggle = useRef<HTMLButtonElement>(null)
   const taps = useRef<number[]>([])
+  /** The press already counted this tap, so the click that follows it mustn't count it again. */
+  const pressed = useRef(false)
   const { bpm, beatsPerBar, subdivision, accent, open } = settings
 
   // The store is the one source of truth; this hands every change to the click (a no-op when
@@ -54,8 +56,8 @@ export function Metronome({ settings, running }: Props) {
     if (b !== bpm) apply({ bpm: b })
   }
   const setOpen = (o: boolean) => apply({ open: o })
-  const tap = () => {
-    const t = tapTempo(taps.current, performance.now())
+  const tap = (at = performance.now()) => {
+    const t = tapTempo(taps.current, at, bpm)
     taps.current = t.taps
     if (t.bpm !== null) setBpm(t.bpm)
   }
@@ -121,10 +123,23 @@ export function Metronome({ settings, running }: Props) {
             type="button"
             className={styles.button}
             aria-label="Tap tempo"
-            onClick={tap}
-            // A held Enter would autorepeat taps ~30 ms apart and pin the tempo at the maximum.
+            // Time the tap on the press (the beat), not the release, which lands later and less evenly.
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              pressed.current = true
+              tap(e.timeStamp)
+            }}
             onKeyDown={(e) => {
-              if (e.repeat) e.preventDefault()
+              if (e.key !== 'Enter' && e.key !== ' ') return
+              // A held key would autorepeat taps ~30 ms apart and pin the tempo at the maximum.
+              if (e.repeat) return e.preventDefault()
+              pressed.current = true
+              tap(e.timeStamp)
+            }}
+            // Activation with no press first (e.g. a screen reader's click) still taps.
+            onClick={() => {
+              if (pressed.current) pressed.current = false
+              else tap()
             }}
           >
             Tap
